@@ -9,7 +9,7 @@ define(['jquery', 'pjs', 'utl', 'utlx'], function($, pjs, utl, utlx){
 
 	var app = function(){
 
-		var end1, end2, fulcrum, apex;
+		var end1, end2, fulcrum, ballBar;
 
 		pjs.setup = function(){
 			pjs.size(500, 500);
@@ -17,21 +17,20 @@ define(['jquery', 'pjs', 'utl', 'utlx'], function($, pjs, utl, utlx){
 			end1 = utlx.fac.newGrabableVector(100, 100);
 			end2 = utlx.fac.newGrabableVector(200, 200);
 			fulcrum = utlx.fac.newGrabableVector(150, 150);
-			apex = utlx.fac.newApex(end1, end2, fulcrum);
+			ballBar = utlx.fac.newBallBar(end1, end2, fulcrum);
 		};
 
 		pjs.draw = function(){
 			end1.moveTo(pjs.mouseX, pjs.mouseY);
 			end2.moveTo(pjs.mouseX, pjs.mouseY);
 			fulcrum.moveTo(pjs.mouseX, pjs.mouseY);
-			apex.update();
 
 			pjs.background(200);
 			pjs.stroke(0, 0, 0);
 			pjs.line(end1.x, end1.y, end2.x, end2.y);
 
 			pjs.ellipse(fulcrum.x, fulcrum.y, 10, 10);
-			pjs.ellipse(apex.projected.x, apex.projected.y, 5, 5);
+			pjs.ellipse(ballBar.projected.x, ballBar.projected.y, 5, 5);
 		};
 
 		pjs.mousePressed = function(){

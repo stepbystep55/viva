@@ -117,41 +117,43 @@ define(['underscore','utl'], function(_, utl){
   };
 
   var validateType = function(a1, a2){
-    if(_.isNull(a2)){
+    if(_.isNull(a2) || _.isUndefined(a2)){
       if(!_.isObject(a1)) throw 'Arg must be object.';
     }else{
       if(!_.isNumber(a1) || !_.isNumber(a2)) throw 'Args must be numeric.';
     }
   };
 
-  // the Vector moving freely with two end points which move the vector
-  var apex = {
-    init: function(end1, end2, fulcrum){
+  // the vector dragged freely and two end points which can move the vector
+  var ballBar = {
+    init: function(end1, end2, ball){
       this.end1 = end1;
       this.end2 = end2;
-      this.fulcrum = fulcrum;
-      this.update();
+      this.ball = ball;
+      this.projected = Object.create(movableVector)._init(utl.tri.prj(this.end1, this.end2, this.ball));
+
+      this.end1.pushCallbacks('updateByBar', this);
+      this.end2.pushCallbacks('updateByBar', this);
+      this.ball.pushCallbacks('updateByBall', this);
+
+      return this;
     }
-    , update: function(){
-      this.projected = utl.tri.prj(this.end1, this.end2, this.fulcrum);
+    , updateByBar: function(){
+    }
+    , updateByBall: function(){
+      this.projected._moveTo(utl.tri.prj(this.end1, this.end2, this.ball));
     }
   };
 
   var factory = {
     newMovableVector: function(x, y){
-      var clone = Object.create(movableVector);
-      clone.init(x, y);
-      return clone;
+      return Object.create(movableVector).init(x, y);
     }
     , newGrabableVector: function(x, y){
-      var clone = Object.create(movableVector);
-      clone.init(x, y, {grabbable: true});
-      return clone;
+      return Object.create(movableVector).init(x, y, {grabbable: true});
     }
-    , newApex: function(end1, end2, fulcrum){
-      var clone = Object.create(apex);
-      clone.init(end1, end2, fulcrum);
-      return clone;
+    , newBallBar: function(end1, end2, ball){
+      return Object.create(ballBar).init(end1, end2, ball);
     }
   };
 
