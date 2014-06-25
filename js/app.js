@@ -16,8 +16,8 @@ define(['jquery', 'pjs', 'utl', 'utlx'], function($, pjs, utl, utlx){
 			pjs.frameRate(10);
 			end1 = utlx.fac.newGrabableVector(100, 100);
 			end2 = utlx.fac.newGrabableVector(200, 200);
-			fulcrum = utlx.fac.newGrabableVector(150, 150);
-			ballBar = utlx.fac.newBallBar(end1, end2, fulcrum);
+			fulcrum = utlx.fac.newGrabableVector(100, 150);
+			ballBar = utlx.fac.newOmega(end1, end2, fulcrum);
 		};
 
 		pjs.draw = function(){
@@ -30,7 +30,7 @@ define(['jquery', 'pjs', 'utl', 'utlx'], function($, pjs, utl, utlx){
 			pjs.line(end1.x, end1.y, end2.x, end2.y);
 
 			pjs.ellipse(fulcrum.x, fulcrum.y, 10, 10);
-			pjs.ellipse(ballBar.projected.x, ballBar.projected.y, 5, 5);
+			pjs.ellipse(ballBar.pPrjd.x, ballBar.pPrjd.y, 5, 5);
 		};
 
 		pjs.mousePressed = function(){

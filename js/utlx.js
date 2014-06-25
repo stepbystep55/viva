@@ -100,15 +100,18 @@ define(['underscore','utl'], function(_, utl){
     }
 
     // get the difference (as vector) between this and another
-    , diff: function(p){
+    , _diff: function(p){
       return {x: this.x - p.x, y: this.y - p.y};
     }
-    , diffPrev: function(p){
+    , _diffPrev: function(p){
       return {x: this.prevX - p.x, y: this.prevY - p.y};
     }
     // get the sum (as vector) of this and another
-    , sum: function(p){
+    , _sum: function(p){
       return {x: this.x + p.x, y: this.y + p.y};
+    }
+    , _add: function(p){
+      return this._sum(p);
     }
 
     , dump: function(){
@@ -124,24 +127,55 @@ define(['underscore','utl'], function(_, utl){
     }
   };
 
-  // the vector dragged freely and two end points which can move the vector
-  var ballBar = {
-    init: function(end1, end2, ball){
-      this.end1 = end1;
-      this.end2 = end2;
-      this.ball = ball;
-      this.projected = Object.create(movableVector)._init(utl.tri.prj(this.end1, this.end2, this.ball));
+  // two anchors and points that are affected by the anchors' moving.
+  var omega = {
+    init: function(a1, a2, p, opts){
+      this.a1 = a1;
+      this.a2= a2;
+      this.p = p;
+      this.pPrjd = Object.create(movableVector)._init(utl.tri.prj(this.a1, this.a2, this.p));
 
-      this.end1.pushCallbacks('updateByBar', this);
-      this.end2.pushCallbacks('updateByBar', this);
-      this.ball.pushCallbacks('updateByBall', this);
+      if(!opts) opts = {};
+      this.noScaling = (opts.noScaling) ? true : false;
+
+      this.a1.pushCallbacks('updateByAnchor1', this);
+      this.a2.pushCallbacks('updateByAnchor2', this);
+      this.p.pushCallbacks('updateByPoint', this);
 
       return this;
     }
-    , updateByBar: function(){
+    , updateByAnchor1: function(){
+      this.updateByAnchor(this.a2, this.a1);
     }
-    , updateByBall: function(){
-      this.projected._moveTo(utl.tri.prj(this.end1, this.end2, this.ball));
+    , updateByAnchor2: function(){
+      this.updateByAnchor(this.a1, this.a2);
+    }
+    , updateByAnchor: function(anchorStayed, anchorMoved){
+      var previousAnchorStayedToAnchorMoved = anchorMoved._diffPrev(anchorStayed);
+      var currentAnchorStayedToAnchorMoved = anchorMoved._diff(anchorStayed);
+      var propotionChanged = utl.tri.mag(currentAnchorStayedToAnchorMoved) / utl.tri.mag(previousAnchorStayedToAnchorMoved);
+      var angleChanged = utl.tri.ang(previousAnchorStayedToAnchorMoved, currentAnchorStayedToAnchorMoved);
+
+      var anchorStayedToPoint = this.p._diff(anchorStayed);
+      anchorStayedToPoint = utl.tri.mv(anchorStayedToPoint, angleChanged);
+      anchorStayedToPoint = utl.tri.mult(anchorStayedToPoint, propotionChanged);
+      var newPoint = anchorStayed._add(anchorStayedToPoint);
+
+      this.p._moveTo(newPoint, {forced: true, nocallback: true});
+      this.pPrjd._moveTo(utl.tri.prj(this.a1, this.a2, this.p));
+
+      if(this.noScaling){
+        var previousProjectedToPoint = this.p._diffPrev(this.pPrjd.prev());
+        var projectedToPoint = this.p._diff(this.pPrjd);
+        var propotion = utl.tri.mag(previousProjectedToPoint) / utl.tri.mag(projectedToPoint);
+        projectedToPoint = utl.tri.mult(projectedToPoint, propotion);
+        var newPoint = this.pPrjd._add(projectedToPoint);
+        this.p._moveTo(newPoint, {forced: true, nocallback: true});
+        this.pPrjd._moveTo(utl.tri.prj(this.a1, this.a2, this.p));
+      }
+    }
+    , updateByPoint: function(){
+      this.pPrjd._moveTo(utl.tri.prj(this.a1, this.a2, this.p));
     }
   };
 
@@ -152,8 +186,8 @@ define(['underscore','utl'], function(_, utl){
     , newGrabableVector: function(x, y){
       return Object.create(movableVector).init(x, y, {grabbable: true});
     }
-    , newBallBar: function(end1, end2, ball){
-      return Object.create(ballBar).init(end1, end2, ball);
+    , newOmega: function(a1, a2, p){
+      return Object.create(omega).init(a1, a2, p, {noScaling: true});
     }
   };
 

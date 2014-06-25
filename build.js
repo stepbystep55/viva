@@ -1,3 +1,4 @@
+// node r.js -o build.js
 ({
   appDir: './'
   , baseUrl: 'js'

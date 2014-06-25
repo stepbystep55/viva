@@ -47,6 +47,9 @@ define(function(){
 		, mult: function(p, n){
 			return {x: p.x * n, y: p.y * n};
 		}
+		, mag: function(p){
+			return Math.sqrt(p.x * p.x + p.y * p.y);
+		}
 
 		// = get the point moved by specified angle
 		, mv: function(p, ang){
