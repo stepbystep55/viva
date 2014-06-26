@@ -42,8 +42,8 @@ define(['underscore','utl'], function(_, utl){
       return this;
     }
 
-    , pushCallbacks: function(methodName, obj){
-      this.callbacks.push({methodName: methodName, obj: obj});
+    , pushCallbacks: function(obj, mtd, args){
+      this.callbacks.push({obj: obj, mtd: mtd, args: args});
       return this;
     }
 
@@ -70,7 +70,7 @@ define(['underscore','utl'], function(_, utl){
       if(!opts.nocallback){
         for(var i = 0; i < this.callbacks.length; i++){
           var callback = this.callbacks[i];
-          callback.obj[callback.methodName].call(callback.obj, this);
+          callback.mtd.apply(callback.obj, callback.args);
         }
       }
       return this;
@@ -134,22 +134,39 @@ define(['underscore','utl'], function(_, utl){
       this.a2= a2;
       this.p = p;
       this.pPrjd = Object.create(movableVector)._init(utl.tri.prj(this.a1, this.a2, this.p));
+      /*
+      this.pArr = [].concat(p); // p can be one value or array
+      this.pPrjdArr = [];
+      for(var i = 0; i < this.pArr.length; i++){
+       this.pPrjdArr = this.pPrjdArr.concat(Object.create(movableVector)._init(utl.tri.prj(this.a1, this.a2, this.pArr[i])));
+      }
+      */
 
       if(!opts) opts = {};
       this.noScaling = (opts.noScaling) ? true : false;
 
-      this.a1.pushCallbacks('updateByAnchor1', this);
-      this.a2.pushCallbacks('updateByAnchor2', this);
-      this.p.pushCallbacks('updateByPoint', this);
+      this.a1.pushCallbacks(this, this.updateByAnchor1);
+      this.a2.pushCallbacks(this, this.updateByAnchor2);
+      this.p.pushCallbacks(this, this.updateByPoint);
+      /*
+      for(var i = 0; i < this.pArr.length; i++){
+        this.pArr[i].pushCallbacks(this, 'updateByPoint');
+      }
+      */
 
       return this;
     }
+    //, updateByAnchor1: function(point){
+      //this.updateByAnchor(this.a2, this.a1, point);
     , updateByAnchor1: function(){
       this.updateByAnchor(this.a2, this.a1);
     }
+    //, updateByAnchor2: function(point){
+      //this.updateByAnchor(this.a1, this.a2, point);
     , updateByAnchor2: function(){
       this.updateByAnchor(this.a1, this.a2);
     }
+    //, updateByAnchor: function(anchorStayed, anchorMoved, point){
     , updateByAnchor: function(anchorStayed, anchorMoved){
       var previousAnchorStayedToAnchorMoved = anchorMoved._diffPrev(anchorStayed);
       var currentAnchorStayedToAnchorMoved = anchorMoved._diff(anchorStayed);
@@ -176,6 +193,9 @@ define(['underscore','utl'], function(_, utl){
     }
     , updateByPoint: function(){
       this.pPrjd._moveTo(utl.tri.prj(this.a1, this.a2, this.p));
+    }
+    , addPoint: function(){
+
     }
   };
 
