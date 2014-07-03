@@ -129,73 +129,60 @@ define(['underscore','utl'], function(_, utl){
 
   // two anchors and points that are affected by the anchors' moving.
   var omega = {
-    init: function(a1, a2, p, opts){
+    init: function(a1, a2, opts){
       this.a1 = a1;
       this.a2= a2;
-      this.p = p;
-      this.pPrjd = Object.create(movableVector)._init(utl.tri.prj(this.a1, this.a2, this.p));
-      /*
-      this.pArr = [].concat(p); // p can be one value or array
-      this.pPrjdArr = [];
-      for(var i = 0; i < this.pArr.length; i++){
-       this.pPrjdArr = this.pPrjdArr.concat(Object.create(movableVector)._init(utl.tri.prj(this.a1, this.a2, this.pArr[i])));
-      }
-      */
-
+      this.pArr = [];
       if(!opts) opts = {};
       this.noScaling = (opts.noScaling) ? true : false;
 
       this.a1.pushCallbacks(this, this.updateByAnchor1);
       this.a2.pushCallbacks(this, this.updateByAnchor2);
-      this.p.pushCallbacks(this, this.updateByPoint);
-      /*
-      for(var i = 0; i < this.pArr.length; i++){
-        this.pArr[i].pushCallbacks(this, 'updateByPoint');
-      }
-      */
 
       return this;
     }
-    //, updateByAnchor1: function(point){
-      //this.updateByAnchor(this.a2, this.a1, point);
+    , addPoints: function(pArr){
+      if(!_.isArray(pArr)) pArr = [pArr]; // pArr can be one value
+      for(var i = 0; i < pArr.length; i++){
+        pArr[i].prjd = Object.create(movableVector)._init(utl.tri.prj(this.a1, this.a2, pArr[i]));
+        pArr[i].pushCallbacks(this, this.updateByPoint, [pArr[i]]);
+        this.pArr.push(pArr[i]);
+      }
+    }
     , updateByAnchor1: function(){
       this.updateByAnchor(this.a2, this.a1);
     }
-    //, updateByAnchor2: function(point){
-      //this.updateByAnchor(this.a1, this.a2, point);
     , updateByAnchor2: function(){
       this.updateByAnchor(this.a1, this.a2);
     }
-    //, updateByAnchor: function(anchorStayed, anchorMoved, point){
     , updateByAnchor: function(anchorStayed, anchorMoved){
       var previousAnchorStayedToAnchorMoved = anchorMoved._diffPrev(anchorStayed);
       var currentAnchorStayedToAnchorMoved = anchorMoved._diff(anchorStayed);
       var propotionChanged = utl.tri.mag(currentAnchorStayedToAnchorMoved) / utl.tri.mag(previousAnchorStayedToAnchorMoved);
       var angleChanged = utl.tri.ang(previousAnchorStayedToAnchorMoved, currentAnchorStayedToAnchorMoved);
 
-      var anchorStayedToPoint = this.p._diff(anchorStayed);
-      anchorStayedToPoint = utl.tri.mv(anchorStayedToPoint, angleChanged);
-      anchorStayedToPoint = utl.tri.mult(anchorStayedToPoint, propotionChanged);
-      var newPoint = anchorStayed._add(anchorStayedToPoint);
+      for(var i = 0; i < this.pArr.length; i++){
+        var anchorStayedToPoint = this.pArr[i]._diff(anchorStayed);
+        anchorStayedToPoint = utl.tri.mv(anchorStayedToPoint, angleChanged);
+        anchorStayedToPoint = utl.tri.mult(anchorStayedToPoint, propotionChanged);
+        var newPoint = anchorStayed._add(anchorStayedToPoint);
 
-      this.p._moveTo(newPoint, {forced: true, nocallback: true});
-      this.pPrjd._moveTo(utl.tri.prj(this.a1, this.a2, this.p));
+        this.pArr[i]._moveTo(newPoint, {forced: true, nocallback: true});
+        this.pArr[i].prjd._moveTo(utl.tri.prj(this.a1, this.a2, this.pArr[i]));
 
-      if(this.noScaling){
-        var previousProjectedToPoint = this.p._diffPrev(this.pPrjd.prev());
-        var projectedToPoint = this.p._diff(this.pPrjd);
-        var propotion = utl.tri.mag(previousProjectedToPoint) / utl.tri.mag(projectedToPoint);
-        projectedToPoint = utl.tri.mult(projectedToPoint, propotion);
-        var newPoint = this.pPrjd._add(projectedToPoint);
-        this.p._moveTo(newPoint, {forced: true, nocallback: true});
-        this.pPrjd._moveTo(utl.tri.prj(this.a1, this.a2, this.p));
+        if(this.noScaling){
+          var previousProjectedToPoint = this.pArr[i]._diffPrev(this.pArr[i].prjd.prev());
+          var projectedToPoint = this.pArr[i]._diff(this.pArr[i].prjd);
+          var propotion = utl.tri.mag(previousProjectedToPoint) / utl.tri.mag(projectedToPoint);
+          projectedToPoint = utl.tri.mult(projectedToPoint, propotion);
+          var newPoint = this.pArr[i].prjd._add(projectedToPoint);
+          this.pArr[i]._moveTo(newPoint, {forced: true, nocallback: true});
+          this.pArr[i].prjd._moveTo(utl.tri.prj(this.a1, this.a2, this.pArr[i]));
+        }
       }
     }
-    , updateByPoint: function(){
-      this.pPrjd._moveTo(utl.tri.prj(this.a1, this.a2, this.p));
-    }
-    , addPoint: function(){
-
+    , updateByPoint: function(p){
+      p.prjd._moveTo(utl.tri.prj(this.a1, this.a2, p));
     }
   };
 
@@ -206,8 +193,8 @@ define(['underscore','utl'], function(_, utl){
     , newGrabableVector: function(x, y){
       return Object.create(movableVector).init(x, y, {grabbable: true});
     }
-    , newOmega: function(a1, a2, p){
-      return Object.create(omega).init(a1, a2, p, {noScaling: true});
+    , newOmega: function(a1, a2){
+      return Object.create(omega).init(a1, a2, {noScaling: true});
     }
   };
 
