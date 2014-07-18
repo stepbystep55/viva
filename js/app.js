@@ -1,41 +1,49 @@
-define(['jquery', 'pjs', 'utl', 'utlx', 'pjsx'], function($, pjs, utl, utlx, pjsx){
+define(['jquery', 'pjs', 'utl', 'utlx', 'pjsx'], function($, $p, utl, utlx, $px){
 	'use strict';
 
 	var loopable = false;
 	$('#btn').click(function(){
 		loopable = !loopable;
-		(loopable) ? pjs.loop() : pjs.noLoop();
+		(loopable) ? $p.loop() : $p.noLoop();
 	});
 
 	var app = function(){
 
-		var end1, end2, fulcrums, omega;
+		var omega, star;
 
-		pjs.setup = function(){
-			pjs.size(500, 500);
-			pjs.frameRate(10);
-			end1 = utlx.fac.newGrabableVector(100, 100);
-			end2 = utlx.fac.newGrabableVector(200, 200);
-			fulcrums = [];
-			fulcrums.push(utlx.fac.newGrabableVector(100, 150));
-			fulcrums.push(utlx.fac.newGrabableVector(90, 120));
-			omega = pjsx.fac.newOmega(end1, end2).addPoints(fulcrums);
+		$p.setup = function(){
+			$p.size(500, 500);
+			$p.frameRate(10);
+
+			var end1 = utlx.fac.newGrabbableVector(100, 100);
+			var end2 = utlx.fac.newGrabbableVector(200, 200);
+			var fulcrums = [];
+			fulcrums.push(utlx.fac.newGrabbableVector(100, 150));
+			fulcrums.push(utlx.fac.newGrabbableVector(90, 120));
+			omega = $px.fac.newOmega(end1, end2, {debug: true}).addPoints(fulcrums);
+
+			var center = utlx.fac.newGrabbableVector(50, 50);
+			var satellite = utlx.fac.newGrabbableVector(60, 80);
+			star = $px.fac.newStar(center, satellite, {debug: true});
 		};
 
-		pjs.draw = function(){
-			pjs.background(200);
+		$p.draw = function(){
+			$p.background(200);
 			omega.update().render();
+			star.update().render();
 		};
 
-		pjs.mousePressed = function(){
+		$p.mousePressed = function(){
 			omega.grab();
+			star.grab();
 		};
 
-		pjs.mouseReleased = function(){
+		$p.mouseReleased = function(){
 			omega.release();
+			star.release();
 		};
 
-		pjs.setup();
+		$p.setup();
 	};
 
 	return app;

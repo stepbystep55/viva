@@ -8,26 +8,13 @@
 <script src="js/lib/jquery.min.2.0.3.js"></script>
 <script>
 $(function(){
-  var opts = {
-    a: 'one'
+  var hash = {one:1, two:undefined};
+  console.log(hash);
+  if(typeof undefined === 'object'){
+    console.log('no');
+  }else{
+    console.log('yes');
   }
-  var obj = {
-    bool: false
-    , mtd: function(a, b, opts){
-      if(opts){
-        console.log('opts.able='+opts.able);
-        if(opts.able == true) this.bool = true;
-      }
-      console.log('bool='+this.bool);
-      if(0) {
-        console.log('0 is true');
-      }else{
-        console.log('0 is false');
-      }
-    }
-  };
-
-  obj.mtd(1,2, {able: 0});
 });
 </script>
 </body>

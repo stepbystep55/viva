@@ -4,37 +4,29 @@ define(['underscore','utl'], function(_, utl){
   // movable vector. you can move this vector anywhere you want.
   var movableVector = {
     name: 'movableVector'
-    , init: function(x, y, opts){
-      validateType(x, y);
+    , init: function(x, y, opts){ // you can call as init(p, opts)
+      var args = this.translateArgs(x, y, opts);
 
-      this.x = x;
-      this.y = y;
-      this.prevX = x; // previous x position
-      this.prevY = y; // previous y position
+      this.x = args.x;
+      this.y = args.y;
+      this.prevX = args.x; // previous x position
+      this.prevY = args.y; // previous y position
 
-      if(!opts) opts = {};
-      this.grabbable = (opts.grabbable) ? true : false; // whether you can grab this
-      this.rad4grab = (opts.rad4grab) ? opts.rad4grab : 10; // radious where you can grab this
+      if(!args.opts) args.opts = {};
+      this.grabbable = (args.opts.grabbable) ? true : false; // whether you can grab this
+      this.rad4grab = (args.opts.rad4grab) ? args.opts.rad4grab : 10; // radious where you can grab this
       this.grabbed = false; // whether you have grabbed this
 
       this.callbacks = [];
 
       return this;
     }
-    , _init: function(p, opts){
-      validateType(p);
-      return this.init(p.x, p.y, opts);
-    }
 
       // grab this
     , grab: function(x, y){
-      validateType(x, y);
-      if(utl.tri.dist(this, {x: x, y: y}) < this.rad4grab) this.grabbed = true;
+      var args = this.translateArgs(x, y);
+      if(utl.tri.dist(this, {x: args.x, y: args.y}) < this.rad4grab) this.grabbed = true;
       return this;
-    }
-    , _grab: function(p){
-      validateType(p);
-      return this.grab(p.x, p.y);
     }
     // release this
     , release: function(){
@@ -56,18 +48,18 @@ define(['underscore','utl'], function(_, utl){
 
     // move specified points
     , move: function(x, y, opts){
-      validateType(x, y);
+      var args = this.translateArgs(x, y, opts);
       // options:
       //   forced - true if not mind grabed or not
       //   nocallback - true if no callback
-      if(!opts) opts = {};
+      if(!args.opts) args.opts = {};
 
-      if(!this.canMove(opts.forced)) return this;
+      if(!this.canMove(args.opts.forced)) return this;
 
       this.prevX = this.x; this.prevY = this.y;
-      this.x += x; this.y += y;
+      this.x += args.x; this.y += args.y;
 
-      if(!opts.nocallback){
+      if(!args.opts.nocallback){
         for(var i = 0; i < this.callbacks.length; i++){
           var callback = this.callbacks[i];
           callback.mtd.apply(callback.obj, callback.args);
@@ -75,18 +67,11 @@ define(['underscore','utl'], function(_, utl){
       }
       return this;
     }
-    , _move: function(p, opts){
-      validateType(p);
-      return this.move(p.x, p.y, opts);
-    }
+
     // move to the specified location
     , moveTo: function(x, y, opts){
-      validateType(x, y);
-      return this.move((x - this.x), (y - this.y), opts);
-    }
-    , _moveTo: function(p, opts){
-      validateType(p);
-      return this.moveTo(p.x, p.y, opts);
+      var args = this.translateArgs(x, y, opts);
+      return this.move((args.x - this.x), (args.y - this.y), args.opts);
     }
 
     // get the track of moving
@@ -100,30 +85,41 @@ define(['underscore','utl'], function(_, utl){
     }
 
     // get the difference (as vector) between this and another
-    , _diff: function(p){
+    , diff: function(p){
       return {x: this.x - p.x, y: this.y - p.y};
     }
-    , _diffPrev: function(p){
+    , diffPrev: function(p){
       return {x: this.prevX - p.x, y: this.prevY - p.y};
     }
-    // get the sum (as vector) of this and another
-    , _sum: function(p){
+    , add: function(p){
       return {x: this.x + p.x, y: this.y + p.y};
     }
-    , _add: function(p){
-      return this._sum(p);
-    }
 
+    , translateArgs: function(x, y, opts){
+      if(typeof x === 'number' && typeof y === 'number'){
+        return {x: x, y: y, opts: opts};
+      }else if(typeof x === 'object'){
+        return {x: x.x, y: x.y, opts: y};
+      }else{
+        throw 'Illegal arguments: x='+x+', y='+y+', opts='+opts;
+      }
+    }
     , dump: function(){
       return 'x='+this.x+', y='+this.y+', prevX='+this.prevX+', prevY='+this.prevY;
     }
   };
 
-  var validateType = function(a1, a2){
-    if(_.isNull(a2) || _.isUndefined(a2)){
-      if(!_.isObject(a1)) throw 'Arg must be object.';
-    }else{
-      if(!_.isNumber(a1) || !_.isNumber(a2)) throw 'Args must be numeric.';
+  var star = {
+    init: function(center, satellite){
+      this.center = center;
+      this.satellite = satellite;
+
+      this.center.pushCallbacks(this, this.update);
+
+      return this;
+    }
+    , update: function(){
+      this.satellite.move(this.center.track(), {forced: true});
     }
   };
 
@@ -144,7 +140,7 @@ define(['underscore','utl'], function(_, utl){
     , addPoints: function(pArr){
       if(!_.isArray(pArr)) pArr = [pArr]; // pArr can be one value
       for(var i = 0; i < pArr.length; i++){
-        pArr[i].prjd = Object.create(movableVector)._init(utl.tri.prj(this.a1, this.a2, pArr[i]));
+        pArr[i].projected = Object.create(movableVector).init(utl.tri.prj(this.a1, this.a2, pArr[i]));
         pArr[i].pushCallbacks(this, this.updateByPoint, [pArr[i]]);
         this.pArr.push(pArr[i]);
       }
@@ -156,33 +152,33 @@ define(['underscore','utl'], function(_, utl){
       this.updateByAnchor(this.a1, this.a2);
     }
     , updateByAnchor: function(anchorStayed, anchorMoved){
-      var previousAnchorStayedToAnchorMoved = anchorMoved._diffPrev(anchorStayed);
-      var currentAnchorStayedToAnchorMoved = anchorMoved._diff(anchorStayed);
+      var previousAnchorStayedToAnchorMoved = anchorMoved.diffPrev(anchorStayed);
+      var currentAnchorStayedToAnchorMoved = anchorMoved.diff(anchorStayed);
       var propotionChanged = utl.tri.mag(currentAnchorStayedToAnchorMoved) / utl.tri.mag(previousAnchorStayedToAnchorMoved);
       var angleChanged = utl.tri.ang(previousAnchorStayedToAnchorMoved, currentAnchorStayedToAnchorMoved);
 
       for(var i = 0; i < this.pArr.length; i++){
-        var anchorStayedToPoint = this.pArr[i]._diff(anchorStayed);
+        var anchorStayedToPoint = this.pArr[i].diff(anchorStayed);
         anchorStayedToPoint = utl.tri.mv(anchorStayedToPoint, angleChanged);
         anchorStayedToPoint = utl.tri.mult(anchorStayedToPoint, propotionChanged);
-        var newPoint = anchorStayed._add(anchorStayedToPoint);
+        var newPoint = anchorStayed.add(anchorStayedToPoint);
 
-        this.pArr[i]._moveTo(newPoint, {forced: true, nocallback: true});
-        this.pArr[i].prjd._moveTo(utl.tri.prj(this.a1, this.a2, this.pArr[i]));
+        this.pArr[i].moveTo(newPoint, {forced: true, nocallback: true});
+        this.pArr[i].projected.moveTo(utl.tri.prj(this.a1, this.a2, this.pArr[i]));
 
         if(this.noScaling){
-          var previousProjectedToPoint = this.pArr[i]._diffPrev(this.pArr[i].prjd.prev());
-          var projectedToPoint = this.pArr[i]._diff(this.pArr[i].prjd);
+          var previousProjectedToPoint = this.pArr[i].diffPrev(this.pArr[i].projected.prev());
+          var projectedToPoint = this.pArr[i].diff(this.pArr[i].projected);
           var propotion = utl.tri.mag(previousProjectedToPoint) / utl.tri.mag(projectedToPoint);
           projectedToPoint = utl.tri.mult(projectedToPoint, propotion);
-          var newPoint = this.pArr[i].prjd._add(projectedToPoint);
-          this.pArr[i]._moveTo(newPoint, {forced: true, nocallback: true});
-          this.pArr[i].prjd._moveTo(utl.tri.prj(this.a1, this.a2, this.pArr[i]));
+          var newPoint = this.pArr[i].projected.add(projectedToPoint);
+          this.pArr[i].moveTo(newPoint, {forced: true, nocallback: true});
+          this.pArr[i].projected.moveTo(utl.tri.prj(this.a1, this.a2, this.pArr[i]));
         }
       }
     }
     , updateByPoint: function(p){
-      p.prjd._moveTo(utl.tri.prj(this.a1, this.a2, p));
+      p.projected.moveTo(utl.tri.prj(this.a1, this.a2, p));
     }
   };
 
@@ -190,8 +186,11 @@ define(['underscore','utl'], function(_, utl){
     newMovableVector: function(x, y){
       return Object.create(movableVector).init(x, y);
     }
-    , newGrabableVector: function(x, y){
+    , newGrabbableVector: function(x, y){
       return Object.create(movableVector).init(x, y, {grabbable: true});
+    }
+    , newStar: function(c, s){
+      return Object.create(star).init(c, s);
     }
     , newOmega: function(a1, a2){
       return Object.create(omega).init(a1, a2, {noScaling: true});
