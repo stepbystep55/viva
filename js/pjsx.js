@@ -1,4 +1,4 @@
-define(['underscore', 'jquery', 'utl', 'utlx', 'pjs'], function(_, $, utl, utlx, $p){
+define(['underscore', 'jquery', 'utl', 'utlx3', 'pjs'], function(_, $, utl, utlx, $p){
   'use strict';
 
   var omega = {
@@ -59,32 +59,39 @@ define(['underscore', 'jquery', 'utl', 'utlx', 'pjs'], function(_, $, utl, utlx,
     }
   };
 
-  var star = {
-    init: function(c, s, opts){
+  var spark = {
+    init: function(c, opts){
       if(_.isNull(opts) || _.isUndefined(opts)) opts = {};
+      this.spine = utlx.fac.newSpark(c);
+      console.log('c='+this.spine.c.name+': '+this.spine.c.x+', '+this.spine.c.y);
       if(opts.debug) this.debug = true;
-      this.spine = utlx.fac.newStar(c, s);
+      return this;
+    }
+    , addPoints: function(pArr){
+      this.spine.addPoints(pArr);
       return this;
     }
     , update: function(){
-      this.spine.center.moveTo($p.mouseX, $p.mouseY);
-      this.spine.satellite.moveTo($p.mouseX, $p.mouseY);
+      this.spine.c.moveTo($p.mouseX, $p.mouseY);
+      for(var i = 0; i < this.spine.pArr.length; i++) this.spine.pArr[i].moveTo($p.mouseX, $p.mouseY);
       return this;
     }
     , grab: function(){
-      this.spine.center.grab($p.mouseX, $p.mouseY);
-      this.spine.satellite.grab($p.mouseX, $p.mouseY);
+      this.spine.c.grab($p.mouseX, $p.mouseY);
+      for(var i = 0; i < this.spine.pArr.length; i++) this.spine.pArr[i].grab($p.mouseX, $p.mouseY);
       return this;
     }
     , release: function(){
-      this.spine.center.release();
-      this.spine.satellite.release();
+      this.spine.c.release();
+      for(var i = 0; i < this.spine.pArr.length; i++) this.spine.pArr[i].release();
       return this;
     }
     , render: function(){
       $p.stroke(0, 0, 0);
-      $p.ellipse(this.spine.center.x, this.spine.center.y, 10, 10);
-      $p.ellipse(this.spine.satellite.x, this.spine.satellite.y, 10, 10);
+      $p.fill(0);
+      $p.ellipse(this.spine.c.x, this.spine.c.y, 10, 10);
+      $p.fill(255);
+      for(var i = 0; i < this.spine.pArr.length; i++) $p.ellipse(this.spine.pArr[i].x, this.spine.pArr[i].y, 10, 10);
       return this;
     }
   };
@@ -95,8 +102,11 @@ define(['underscore', 'jquery', 'utl', 'utlx', 'pjs'], function(_, $, utl, utlx,
       opts.noScaling = true;
       return Object.create(omega).init(a1, a2, opts);
     }
-    , newStar: function(c, s, opts){
-      return Object.create(star).init(c, s, opts);
+    , newPair: function(c, s, opts){
+      return Object.create(spark).init(c, opts).addPoints(s);
+    }
+    , newSpark: function(c, opts){
+      return Object.create(spark).init(c, opts);
     }
   };
 

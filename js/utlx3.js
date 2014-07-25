@@ -1,9 +1,9 @@
-define(['underscore','utl'], function(_, utl){
+define(['underscore', 'utl'], function(_, utl){
   'use strict';
 
   // movable vector. you can move this vector anywhere you want.
-  var movableVector = {
-    name: 'movableVector'
+  var movable = {
+    name: 'movable'
     , init: function(x, y, opts){ // you can call as init(p, opts)
       var args = this.translateArgs(x, y, opts);
 
@@ -12,38 +12,14 @@ define(['underscore','utl'], function(_, utl){
       this.prevX = args.x; // previous x position
       this.prevY = args.y; // previous y position
 
-      if(!args.opts) args.opts = {};
-      this.grabbable = args.opts.grabbable || false; // whether you can grab this
-      this.rad4grab = args.opts.rad4grab || 10; // radious where you can grab this
-      this.grabbed = false; // whether you have grabbed this
-
       this.callbacks = [];
 
-      return this;
-    }
-
-      // grab this
-    , grab: function(x, y){
-      var args = this.translateArgs(x, y);
-      if(utl.tri.dist(this, {x: args.x, y: args.y}) < this.rad4grab) this.grabbed = true;
-      return this;
-    }
-    // release this
-    , release: function(){
-      this.grabbed = false;
       return this;
     }
 
     , pushCallbacks: function(obj, mtd, args){
       this.callbacks.push({obj: obj, mtd: mtd, args: args});
       return this;
-    }
-
-    , canMove: function(forced){
-      if(!this.grabbable) return true;
-      if(this.grabbed) return true;
-      if(forced) return true;
-      return false;
     }
 
     // move specified points
@@ -53,8 +29,6 @@ define(['underscore','utl'], function(_, utl){
       //   forced - true if not mind grabed or not
       //   nocallback - true if no callback
       if(!args.opts) args.opts = {};
-
-      if(!this.canMove(args.opts.forced)) return this;
 
       this.prevX = this.x; this.prevY = this.y;
       this.x += args.x; this.y += args.y;
@@ -97,16 +71,50 @@ define(['underscore','utl'], function(_, utl){
 
     , translateArgs: function(x, y, opts){
       if(typeof x === 'number' && typeof y === 'number'){
-        return {x: x, y: y, opts: opts};
+        return {x: x, y: y, opts: opts || {}};
       }else if(typeof x === 'object'){
-        return {x: x.x, y: x.y, opts: y};
+        return {x: x.x, y: x.y, opts: y || {}};
       }else{
         throw 'Illegal arguments: x='+x+', y='+y+', opts='+opts;
       }
     }
-    , dump: function(){
-      return 'x='+this.x+', y='+this.y+', prevX='+this.prevX+', prevY='+this.prevY;
-    }
+  };
+
+  var createGrabbable = function(){
+    var grabbable = Object.create(movable);
+    grabbable.name = 'grabbable';
+
+    grabbable.init = function(x, y, opts){ // you can call as init(p, opts)
+      var args = this.translateArgs(x, y, opts);
+      if(!args.opts) args.opts = {};
+      this.rad4grab = args.opts.rad4grab || 10; // radious where you  can grab this
+      this.grabbed = false; // whether you have grabbed this
+      Object.getPrototypeOf(this).init.call(this, args.x, args.y, args.opts);
+      return this;
+    };
+    // grab this
+    grabbable.grab = function(x, y){
+      var args = this.translateArgs(x, y);
+      if(utl.tri.dist(this, {x: args.x, y: args.y}) < this.rad4grab) this.grabbed = true;
+      return this;
+    };
+    // release this
+    grabbable.release = function(){
+      this.grabbed = false;
+      return this;
+    };
+    grabbable.canMove = function(forced){
+      if(this.grabbed) return true;
+      if(forced) return true;
+      return false;
+    };
+    grabbable.move = function(x, y, opts){
+      var args = this.translateArgs(x, y, opts);
+      if(!this.canMove(args.opts.forced)) return this;
+      Object.getPrototypeOf(this).move.call(this, args.x, args.y, args.opts);
+      return this;
+    };
+    return grabbable;
   };
 
   var spark = {
@@ -121,6 +129,7 @@ define(['underscore','utl'], function(_, utl){
     , addPoints: function(pArr){
       if(!_.isArray(pArr)) pArr = [pArr]; // pArr can be one value
       for(var i = 0; i < pArr.length; i++) this.pArr.push(pArr[i]);
+      return this;
     }
     , update: function(){
       for(var i = 0; i < this.pArr.length; i++) this.pArr[i].move(this.c.track(), {forced: true});
@@ -145,10 +154,11 @@ define(['underscore','utl'], function(_, utl){
     , addPoints: function(pArr){
       if(!_.isArray(pArr)) pArr = [pArr]; // pArr can be one value
       for(var i = 0; i < pArr.length; i++){
-        pArr[i].projected = Object.create(movableVector).init(utl.tri.prj(this.a1, this.a2, pArr[i]));
+        pArr[i].projected = Object.create(movable).init(utl.tri.prj(this.a1, this.a2, pArr[i]));
         pArr[i].pushCallbacks(this, this.updateByPoint, [pArr[i]]);
         this.pArr.push(pArr[i]);
       }
+      return this;
     }
     , updateByAnchor1: function(){
       this.updateByAnchor(this.a2, this.a1);
@@ -188,11 +198,11 @@ define(['underscore','utl'], function(_, utl){
   };
 
   var factory = {
-    newMovableVector: function(x, y){
-      return Object.create(movableVector).init(x, y);
+    newMovable: function(x, y){
+      return Object.create(movable).init(x, y);
     }
-    , newGrabbableVector: function(x, y){
-      return Object.create(movableVector).init(x, y, {grabbable: true});
+    , newGrabbable: function(x, y){
+      return createGrabbable().init(x, y, {grabbable: true});
     }
     , newSpark: function(c){
       return Object.create(spark).init(c);

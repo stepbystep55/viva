@@ -8,13 +8,33 @@
 <script src="js/lib/jquery.min.2.0.3.js"></script>
 <script>
 $(function(){
-  var hash = {one:1, two:undefined};
-  console.log(hash);
-  if(typeof undefined === 'object'){
-    console.log('no');
-  }else{
-    console.log('yes');
+  var parent = {
+    name: 'parent'
+    , hi: function(){
+      console.log('HI '+this.name);
+      return this;
+    }
+    , yeah: function(){
+      console.log('YEAH '+this.name);
+      return this;
+    }
+  };
+  var child = Object.create(parent);
+  child.name = 'child';
+  child.yeah = function(){
+    console.log('yeah '+this.name);
+    return this;
+  };
+  child.hi().yeah();
+  for(var p in parent){
+    console.log(p + ': type of '+typeof parent[p]);
   }
+
+  taco = function(y){
+    var x = y || 1;
+    console.log('x='+x);
+  }
+  taco();
 });
 </script>
 </body>
