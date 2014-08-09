@@ -15,16 +15,16 @@ define(['jquery', 'pjs', 'utl', 'utlx3', 'pjsx3'], function($, $p, utl, utlx, $p
 			$p.size(500, 500);
 			$p.frameRate(10);
 
+			pair1 = $px.fac.newPair(130, 200, 100, 200, {debug: true});
+			pair2 = $px.fac.newPair(230, 200, 300, 250, {debug: true});
+
 			var end1 = utlx.fac.newGrabbable(100, 100);
 			var end2 = utlx.fac.newGrabbable(300, 200);
-
-			pair1 = $px.fac.newPair(utlx.fac.newGrabbable(130, 200), utlx.fac.newGrabbable(100, 200), {debug: true});
-			pair2 = $px.fac.newPair(utlx.fac.newGrabbable(230, 200), utlx.fac.newGrabbable(300, 250), {debug: true});
 
 			var fulcrums = [];
 			fulcrums.push(utlx.fac.newGrabbable(150, 190));
 			fulcrums.push(utlx.fac.newGrabbable(110, 130));
-			omega = $px.fac.newOmega(end1, end2, {debug: true}).addPoints([pair1.c, pair2.c]);
+			omega = $px.fac.newOmega(end1, end2, {debug: true}).addPoints([pair1, pair2]);
 		};
 
 		$p.draw = function(){

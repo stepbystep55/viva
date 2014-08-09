@@ -7,6 +7,24 @@ define(['underscore', 'jquery', 'utl', 'utlx3', 'pjs'], function(_, $, utl, utlx
     omega.name = 'omega';
     if(opts.debug) omega.debug = true;
 
+    omega.grab = function(){
+      this.a1.grab($p.mouseX, $p.mouseY);
+      this.a2.grab($p.mouseX, $p.mouseY);
+      for(var i = 0; i < this.pArr.length; i++) this.pArr[i].grab($p.mouseX, $p.mouseY);
+      return this;
+    };
+    omega.release = function(){
+      this.a1.release();
+      this.a2.release();
+      for(var i = 0; i < this.pArr.length; i++) this.pArr[i].release();
+      return this;
+    };
+    omega.update = function(){
+      this.a1.moveTo($p.mouseX, $p.mouseY);
+      this.a2.moveTo($p.mouseX, $p.mouseY);
+      for(var i = 0; i < this.pArr.length; i++) this.pArr[i].moveTo($p.mouseX, $p.mouseY);
+      return this;
+    };
     omega.render = function(){
       $p.stroke(0, 0, 0);
       $p.ellipse(this.a1.x, this.a1.y, 10, 10);
@@ -38,6 +56,21 @@ define(['underscore', 'jquery', 'utl', 'utlx3', 'pjs'], function(_, $, utl, utlx
     spark.name = 'spark';
     if(opts.debug) spark.debug = true;
 
+    spark.update = function(){
+      this.c.moveTo($p.mouseX, $p.mouseY);
+      for(var i = 0; i < this.pArr.length; i++) this.pArr[i].moveTo($p.mouseX, $p.mouseY);
+      return this;
+    };
+    spark.grab = function(){
+      this.c.grab($p.mouseX, $p.mouseY);
+      for(var i = 0; i < this.pArr.length; i++) this.pArr[i].grab($p.mouseX, $p.mouseY);
+      return this;
+    };
+    spark.release = function(){
+      this.c.release();
+      for(var i = 0; i < this.pArr.length; i++) this.pArr[i].release();
+      return this;
+    };
     spark.render = function(){
       $p.stroke(0, 0, 0);
       $p.fill(0);

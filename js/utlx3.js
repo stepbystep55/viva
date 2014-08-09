@@ -119,11 +119,10 @@ define(['underscore', 'utl'], function(_, utl){
 
   var spark = {
     init: function(c){
-      // c & pArr must be grabbable.
       this.c = c; // center
       this.pArr = [];
 
-      this.c.pushCallbacks(this, this._update);
+      this.c.pushCallbacks(this, this.update);
 
       return this;
     }
@@ -132,24 +131,8 @@ define(['underscore', 'utl'], function(_, utl){
       for(var i = 0; i < pArr.length; i++) this.pArr.push(pArr[i]);
       return this;
     }
-    , _update: function(){
+    , update: function(){
       for(var i = 0; i < this.pArr.length; i++) this.pArr[i].move(this.c.track(), {forced: true});
-      return this;
-    }
-
-    , update: function(x, y){
-      this.c.moveTo(x, y);
-      for(var i = 0; i < this.pArr.length; i++) this.pArr[i].moveTo(x, y);
-      return this;
-    }
-    , grab: function(x, y){
-      this.c.grab(x, y);
-      for(var i = 0; i < this.pArr.length; i++) this.pArr[i].grab(x, y);
-      return this;
-    }
-    , release: function(){
-      this.c.release();
-      for(var i = 0; i < this.pArr.length; i++) this.pArr[i].release();
       return this;
     }
   };
@@ -157,15 +140,14 @@ define(['underscore', 'utl'], function(_, utl){
   // two anchors and points that are affected by the anchors' moving.
   var omega = {
     init: function(a1, a2, opts){
-      // a1 & a2 & pArr must be grabbable.
       this.a1 = a1;
       this.a2= a2;
       this.pArr = [];
       if(!opts) opts = {};
       this.noScaling = opts.noScaling || false;
 
-      this.a1.pushCallbacks(this, this._updateByAnchor1);
-      this.a2.pushCallbacks(this, this._updateByAnchor2);
+      this.a1.pushCallbacks(this, this.updateByAnchor1);
+      this.a2.pushCallbacks(this, this.updateByAnchor2);
 
       return this;
     }
@@ -173,18 +155,18 @@ define(['underscore', 'utl'], function(_, utl){
       if(!_.isArray(pArr)) pArr = [pArr]; // pArr can be one value
       for(var i = 0; i < pArr.length; i++){
         pArr[i].projected = Object.create(movable).init(utl.tri.prj(this.a1, this.a2, pArr[i]));
-        pArr[i].pushCallbacks(this, this._updateByPoint, [pArr[i]]);
+        pArr[i].pushCallbacks(this, this.updateByPoint, [pArr[i]]);
         this.pArr.push(pArr[i]);
       }
       return this;
     }
-    , _updateByAnchor1: function(){
-      this._updateByAnchor(this.a2, this.a1);
+    , updateByAnchor1: function(){
+      this.updateByAnchor(this.a2, this.a1);
     }
-    , _updateByAnchor2: function(){
-      this._updateByAnchor(this.a1, this.a2);
+    , updateByAnchor2: function(){
+      this.updateByAnchor(this.a1, this.a2);
     }
-    , _updateByAnchor: function(anchorStayed, anchorMoved){
+    , updateByAnchor: function(anchorStayed, anchorMoved){
       var previousAnchorStayedToAnchorMoved = anchorMoved.diffPrev(anchorStayed);
       var currentAnchorStayedToAnchorMoved = anchorMoved.diff(anchorStayed);
       var propotionChanged = utl.tri.mag(currentAnchorStayedToAnchorMoved) / utl.tri.mag(previousAnchorStayedToAnchorMoved);
@@ -210,27 +192,8 @@ define(['underscore', 'utl'], function(_, utl){
         }
       }
     }
-    , _updateByPoint: function(p){
+    , updateByPoint: function(p){
       p.projected.moveTo(utl.tri.prj(this.a1, this.a2, p));
-    }
-
-    , grab: function(x, y){
-      this.a1.grab(x, y);
-      this.a2.grab(x, y);
-      for(var i = 0; i < this.pArr.length; i++) this.pArr[i].grab(x, y);
-      return this;
-    }
-    , release: function(){
-      this.a1.release();
-      this.a2.release();
-      for(var i = 0; i < this.pArr.length; i++) this.pArr[i].release();
-      return this;
-    }
-    , update: function(x, y){
-      this.a1.moveTo(x, y);
-      this.a2.moveTo(x, y);
-      for(var i = 0; i < this.pArr.length; i++) this.pArr[i].moveTo(x, y);
-      return this;
     }
   };
 
