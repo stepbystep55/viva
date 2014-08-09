@@ -1,4 +1,4 @@
-define(['jquery', 'pjs', 'utl', 'utlx3', 'pjsx3'], function($, $p, utl, utlx, $px){
+define(['jquery', 'pjs', 'utl', 'utlx2', 'pjsx2'], function($, $p, utl, utlx, $px){
 	'use strict';
 
 	var loopable = false;

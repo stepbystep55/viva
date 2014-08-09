@@ -28,7 +28,6 @@ define(['underscore', 'utl'], function(_, utl){
     , move: function(x, y, opts){
       var args = this.translateArgs(x, y, opts);
       // options:
-      //   forced - true if not mind grabed or not
       //   nocallback - true if no callback
       if(!args.opts) args.opts = {};
 
@@ -101,6 +100,8 @@ define(['underscore', 'utl'], function(_, utl){
       };
     }else if(key === 'move'){
       grabbable.move = function(x, y, opts){
+        // options:
+        //   forced - true if not mind grabed or not
         var args = movable.translateArgs(x, y, opts);
         if(!this.canMove(args.opts.forced)) return this;
         movable.move.call(this, args.x, args.y, args.opts);
@@ -145,10 +146,14 @@ define(['underscore', 'utl'], function(_, utl){
       };
     }else if(key === 'move'){
       spark.move = function(x, y, opts){
+        // options:
+        //   alone - true if not move points
         var args = grabbable.translateArgs(x, y, opts);
         if(!this.canMove(args.opts.forced)) return this;
         grabbable.move.call(this, args.x, args.y, args.opts);
-       for(var i = 0; i < this.points.length; i++) this.points[i].move(this.track(), {forced: true});
+        if(!opts.alone){
+          for(var i = 0; i < this.points.length; i++) this.points[i].move(this.track(), {forced: true});
+        }
         return this;
       };
     }else if(key === 'grab'){
@@ -205,6 +210,11 @@ define(['underscore', 'utl'], function(_, utl){
       for(var i = 0; i < pArr.length; i++){
         pArr[i].projected = Object.create(movable).init(utl.tri.prj(this.a1, this.a2, pArr[i]));
         pArr[i].pushCallbacks(this, this.respondForPoint, [pArr[i]]);
+        if(pArr[i].points){
+          for(var k = 0; k < pArr[i].points.length; k++){
+            pArr[i].points[k].projected = Object.create(movable).init(utl.tri.prj(this.a1, this.a2, pArr[i].points[k]));
+          }
+        }
         this.points.push(pArr[i]);
       }
       return this;
@@ -222,27 +232,38 @@ define(['underscore', 'utl'], function(_, utl){
       var angleChanged = utl.tri.ang(previousAnchorStayedToAnchorMoved, currentAnchorStayedToAnchorMoved);
 
       for(var i = 0; i < this.points.length; i++){
-        var anchorStayedToPoint = this.points[i].diff(anchorStayed);
-        anchorStayedToPoint = utl.tri.mv(anchorStayedToPoint, angleChanged);
-        anchorStayedToPoint = utl.tri.mult(anchorStayedToPoint, propotionChanged);
-        var newPoint = anchorStayed.add(anchorStayedToPoint);
-
-        this.points[i].moveTo(newPoint, {forced: true, nocallback: true});
-        this.points[i].projected.moveTo(utl.tri.prj(this.a1, this.a2, this.points[i]));
-
-        if(this.noScaling){
-          var previousProjectedToPoint = this.points[i].diffPrev(this.points[i].projected.prev());
-          var projectedToPoint = this.points[i].diff(this.points[i].projected);
-          var propotion = utl.tri.mag(previousProjectedToPoint) / utl.tri.mag(projectedToPoint);
-          projectedToPoint = utl.tri.mult(projectedToPoint, propotion);
-          var newPoint = this.points[i].projected.add(projectedToPoint);
-          this.points[i].moveTo(newPoint, {forced: true, nocallback: true});
-          this.points[i].projected.moveTo(utl.tri.prj(this.a1, this.a2, this.points[i]));
+        this._movePoint(this.points[i], anchorStayed, propotionChanged, angleChanged);
+        if(this.points[i].points){
+          for(var k = 0; k < this.points[i].points.length; k++){
+            this._movePoint(this.points[i].points[k], anchorStayed, propotionChanged, angleChanged);
+          }
         }
+      }
+    }
+    , _movePoint: function(point, anchorStayed, propotionChanged, angleChanged){
+      var anchorStayedToPoint = point.diff(anchorStayed);
+      anchorStayedToPoint = utl.tri.mv(anchorStayedToPoint, angleChanged);
+      anchorStayedToPoint = utl.tri.mult(anchorStayedToPoint, propotionChanged);
+      var newPoint = anchorStayed.add(anchorStayedToPoint);
+
+      point.moveTo(newPoint, {forced: true, nocallback: true, alone: true});
+      if(point.projected) point.projected.moveTo(utl.tri.prj(this.a1, this.a2, point));
+
+      if(this.noScaling){
+        var previousProjectedToPoint = point.diffPrev(point.projected.prev());
+        var projectedToPoint = point.diff(point.projected);
+        var propotion = utl.tri.mag(previousProjectedToPoint) / utl.tri.mag(projectedToPoint);
+        projectedToPoint = utl.tri.mult(projectedToPoint, propotion);
+        var newPoint = point.projected.add(projectedToPoint);
+        point.moveTo(newPoint, {forced: true, nocallback: true, alone: true});
+        point.projected.moveTo(utl.tri.prj(this.a1, this.a2, point));
       }
     }
     , respondForPoint: function(p){
       p.projected.moveTo(utl.tri.prj(this.a1, this.a2, p));
+      if(p.points){
+        for(var i = 0; i < p.points.length; i++) p.points[i].projected.moveTo(utl.tri.prj(this.a1, this.a2, p.points[i]));
+      }
     }
 
     , grab: function(x, y){
