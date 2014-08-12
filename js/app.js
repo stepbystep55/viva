@@ -1,6 +1,9 @@
 define(['jquery', 'pjs', 'utl', 'utlx2', 'pjsx2'], function($, $p, utl, utlx, $px){
 	'use strict';
 
+	var layer = 0;
+	$('#switcher').on('click', function(e){ ++layer; });
+
 	var loopable = false;
 	$('#btn').click(function(){
 		loopable = !loopable;
@@ -9,41 +12,62 @@ define(['jquery', 'pjs', 'utl', 'utlx2', 'pjsx2'], function($, $p, utl, utlx, $p
 
 	var app = function(){
 
-		var omega, pair1, pair2;
+		var omega, spark1, spark2, spark3;
 
 		$p.setup = function(){
 			$p.size(500, 500);
 			$p.frameRate(10);
 
-			pair1 = $px.fac.newPair(130, 200, 100, 200, {debug: true});
-			pair2 = $px.fac.newPair(230, 200, 300, 250, {debug: true});
+			spark1 = $px.fac.newSpark(100, 200, {debug: true});
+			spark1.addPoint(70, 170);
+			spark1.addPoint(130, 230);
+			spark2 = $px.fac.newSpark(200, 300, {debug: true});
+			spark2.addPoint(170, 270);
+			spark2.addPoint(230, 330);
+			spark3 = $px.fac.newSpark(300, 400, {debug: true});
+			spark3.addPoint(270, 370);
+			spark3.addPoint(430, 430);
 
 			var end1 = utlx.fac.newGrabbable(100, 100);
-			var end2 = utlx.fac.newGrabbable(300, 200);
+			var end2 = utlx.fac.newGrabbable(400, 400);
 
-			var fulcrums = [];
-			fulcrums.push(utlx.fac.newGrabbable(150, 190));
-			fulcrums.push(utlx.fac.newGrabbable(110, 130));
-			omega = $px.fac.newOmega(end1, end2, {debug: true}).addPoints([pair1, pair2]);
+			omega = $px.fac.newOmega(end1, end2, {debug: true}).addPoints([spark1, spark2, spark3]);
 		};
 
 		$p.draw = function(){
-			$p.background(200);
+			$p.background(64);
 			omega.update($p.mouseX, $p.mouseY).render();
-			pair1.update($p.mouseX, $p.mouseY).render();
-			pair2.update($p.mouseX, $p.mouseY).render();
+			spark1.update($p.mouseX, $p.mouseY).render();
+			spark2.update($p.mouseX, $p.mouseY).render();
+			spark3.update($p.mouseX, $p.mouseY).render();
 		};
 
 		$p.mousePressed = function(){
-			omega.grab($p.mouseX, $p.mouseY);
-			pair1.grab($p.mouseX, $p.mouseY);
-			pair2.grab($p.mouseX, $p.mouseY);
+			switch(layer % 4){
+				case 0:
+					omega.grabAnchors($p.mouseX, $p.mouseY);
+					break;
+				case 1:
+					omega.grabPoints($p.mouseX, $p.mouseY);
+					break;
+				case 2:
+					spark1.grab($p.mouseX, $p.mouseY);
+					spark2.grab($p.mouseX, $p.mouseY);
+					spark3.grab($p.mouseX, $p.mouseY);
+					break;
+				case 3:
+					spark1.grabPoints($p.mouseX, $p.mouseY);
+					spark2.grabPoints($p.mouseX, $p.mouseY);
+					spark3.grabPoints($p.mouseX, $p.mouseY);
+					break;
+			}
 		};
 
 		$p.mouseReleased = function(){
 			omega.release();
-			pair1.release();
-			pair2.release();
+			spark1.release();
+			spark2.release();
+			spark3.release();
 		};
 
 		$p.setup();

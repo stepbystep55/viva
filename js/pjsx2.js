@@ -19,15 +19,20 @@ define(['underscore', 'jquery', 'utl', 'utlx2', 'pjs'], function(_, $, utl, utlx
         $p.text('' + Math.round(this.a2.x) + ',' + Math.round(this.a2.y), this.a2.x, this.a2.y);
       }
 
-      for(var i = 0; i < this.points.length; i++){
-        $p.ellipse(this.points[i].x, this.points[i].y, 10, 10);
-        $p.ellipse(this.points[i].projected.x, this.points[i].projected.y, 5, 5);
-        if(this.debug){
-          $p.textSize(8);
-          $p.text('' + Math.round(this.points[i].x) + ',' + Math.round(this.points[i].y), this.points[i].x, this.points[i].y);
-        }
+      $p.noFill();
+      $p.beginShape();
+      $p.vertex(this.points[0].x, this.points[0].y);
+      for(var i = 1; i < this.points.length; i++){
+        $p.bezierVertex(
+          this.points[i-1].points[1].x
+          , this.points[i-1].points[1].y
+          , this.points[i].points[0].x
+          , this.points[i].points[0].y
+          , this.points[i].x
+          , this.points[i].y
+        );
       }
-      return this;
+      $p.endShape();
     };
     return omega;
   };
@@ -58,8 +63,8 @@ define(['underscore', 'jquery', 'utl', 'utlx2', 'pjs'], function(_, $, utl, utlx
     , newPair: function(cx, cy, sx, sy, opts){
       return createSpark(cx, cy, opts).addPoint(sx, sy);
     }
-    , newSpark: function(c, opts){
-      return createSpark(c, opts);
+    , newSpark: function(cx, cy, opts){
+      return createSpark(cx, cy, opts);
     }
   };
 

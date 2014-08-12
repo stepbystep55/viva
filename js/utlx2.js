@@ -156,6 +156,7 @@ define(['underscore', 'utl'], function(_, utl){
         }
         return this;
       };
+      /*
     }else if(key === 'grab'){
       spark.grab = function(x, y){
         var args = this.translateArgs(x, y);
@@ -163,6 +164,7 @@ define(['underscore', 'utl'], function(_, utl){
         for(var i = 0; i < this.points.length; i++) this.points[i].grab(args.x, args.y);
         return this;
       };
+      */
     }else if(key === 'release'){
       spark.release = function(){
         grabbable.release.call(this);
@@ -187,6 +189,11 @@ define(['underscore', 'utl'], function(_, utl){
     var args = this.translateArgs(x, y);
     this.moveTo(args.x, args.y);
     for(var i = 0; i < this.points.length; i++) this.points[i].moveTo(args.x, args.y);
+    return this;
+  };
+  spark.grabPoints = function(x, y){
+    var args = this.translateArgs(x, y);
+    for(var i = 0; i < this.points.length; i++) this.points[i].grab(args.x, args.y);
     return this;
   };
 
@@ -267,8 +274,14 @@ define(['underscore', 'utl'], function(_, utl){
     }
 
     , grab: function(x, y){
+      return this.grabAnchors(x, y).grabPoints(x, y);
+    }
+    , grabAnchors: function(x, y){
       this.a1.grab(x, y);
       this.a2.grab(x, y);
+      return this;
+    }
+    , grabPoints: function(x, y){
       for(var i = 0; i < this.points.length; i++) this.points[i].grab(x, y);
       return this;
     }
