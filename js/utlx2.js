@@ -75,9 +75,8 @@ define(['underscore', 'utl'], function(_, utl){
         return {x: x, y: y, opts: opts || {}};
       }else if(typeof x === 'object'){
         return {x: x.x, y: x.y, opts: y || {}};
-      }else{
-        throw 'Illegal arguments: x='+x+', y='+y+', opts='+opts;
       }
+      throw 'Illegal arguments: x='+x+', y='+y+', opts='+opts;
     }
   };
 
@@ -129,23 +128,23 @@ define(['underscore', 'utl'], function(_, utl){
   };
 
   /*
-   * an grabbable center with grabbable satellites.
-   * the center's moving affects satellites but satellites' moving doesn't affect others.
+   * an grabbable center with grabbable sparks.
+   * the center's moving affects sparks but sparks' moving doesn't affect others.
    */
-  var spark = {
-    name: 'spark'
+  var sunrays = {
+    name: 'sunrays'
   };
   // extends movable
   for(var key in grabbable){
     if(key === 'init'){
-      spark.init = function(x, y, opts){
+      sunrays.init = function(x, y, opts){
         var args = grabbable.translateArgs(x, y, opts);
         grabbable.init.call(this, args.x, args.y, args.opts);
         this.points = [];
         return this;
       };
     }else if(key === 'move'){
-      spark.move = function(x, y, opts){
+      sunrays.move = function(x, y, opts){
         // options:
         //   alone - true if not move points
         var args = grabbable.translateArgs(x, y, opts);
@@ -156,49 +155,40 @@ define(['underscore', 'utl'], function(_, utl){
         }
         return this;
       };
-      /*
-    }else if(key === 'grab'){
-      spark.grab = function(x, y){
-        var args = this.translateArgs(x, y);
-        grabbable.grab.call(this, args.x, args.y);
-        for(var i = 0; i < this.points.length; i++) this.points[i].grab(args.x, args.y);
-        return this;
-      };
-      */
     }else if(key === 'release'){
-      spark.release = function(){
+      sunrays.release = function(){
         grabbable.release.call(this);
         for(var i = 0; i < this.points.length; i++) this.points[i].release();
         return this;
       };
     }else{
-      spark[key] = grabbable[key];
+      sunrays[key] = grabbable[key];
     }
   }
-  spark.addPoint = function(x, y){
+  sunrays.addPoint = function(x, y){
     var args = this.translateArgs(x, y);
     this.points.push(Object.create(grabbable).init(args.x, args.y));
     return this;
   };
-  spark.addPoints = function(pArr){
+  sunrays.addPoints = function(pArr){
     if(!_.isArray(pArr)) pArr = [pArr]; // pArr can be one value
     for(var i = 0; i < pArr.length; i++) this.points.push(pArr[i]);
     return this;
   };
-  spark.update = function(x, y){
+  sunrays.update = function(x, y){
     var args = this.translateArgs(x, y);
     this.moveTo(args.x, args.y);
     for(var i = 0; i < this.points.length; i++) this.points[i].moveTo(args.x, args.y);
     return this;
   };
-  spark.grabPoints = function(x, y){
+  sunrays.grabPoints = function(x, y){
     var args = this.translateArgs(x, y);
     for(var i = 0; i < this.points.length; i++) this.points[i].grab(args.x, args.y);
     return this;
   };
 
   // two anchors and points that are affected by the anchors' moving.
-  var omega = {
+  var histogram = {
     init: function(a1, a2, opts){
       // a1 & a2 & points must be grabbable.
       this.a1 = a1;
@@ -306,11 +296,11 @@ define(['underscore', 'utl'], function(_, utl){
     , newGrabbable: function(x, y, opts){
       return Object.create(grabbable).init(x, y, opts);
     }
-    , newSpark: function(x, y, opts){
-      return Object.create(spark).init(x, y, opts);
+    , newSunrays: function(x, y, opts){
+      return Object.create(sunrays).init(x, y, opts);
     }
-    , newOmega: function(a1, a2){
-      return Object.create(omega).init(a1, a2, {noScaling: true});
+    , newHistogram: function(a1, a2){
+      return Object.create(histogram).init(a1, a2, {noScaling: true});
     }
   };
 

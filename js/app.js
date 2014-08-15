@@ -1,7 +1,15 @@
 define(['jquery', 'pjs', 'utl', 'utlx2', 'pjsx2'], function($, $p, utl, utlx, $px){
 	'use strict';
 
-	var layer = 0;
+	var CANVAS_WIDTH = 500;
+	var CANVAS_HEIGTH = 500;
+
+	var BACKGROUND_COLOR = 64;
+
+	var LAYER_OMEGA_ANCHORS = 0
+	var LAYER_OMEGA_POINTS = 1;
+	var LAYER_OMEGA_POINTS_POINTS = 2;
+	var layer = LAYER_OMEGA_ANCHORS;
 	$('#switcher').on('click', function(e){ ++layer; });
 
 	var loopable = false;
@@ -12,62 +20,79 @@ define(['jquery', 'pjs', 'utl', 'utlx2', 'pjsx2'], function($, $p, utl, utlx, $p
 
 	var app = function(){
 
-		var omega, spark1, spark2, spark3;
+		var omega, clay;
 
 		$p.setup = function(){
-			$p.size(500, 500);
+			$p.size(CANVAS_WIDTH, CANVAS_HEIGTH);
 			$p.frameRate(10);
 
-			spark1 = $px.fac.newSpark(100, 200, {debug: true});
-			spark1.addPoint(70, 170);
-			spark1.addPoint(130, 230);
-			spark2 = $px.fac.newSpark(200, 300, {debug: true});
-			spark2.addPoint(170, 270);
-			spark2.addPoint(230, 330);
-			spark3 = $px.fac.newSpark(300, 400, {debug: true});
-			spark3.addPoint(270, 370);
-			spark3.addPoint(430, 430);
-
+			var points = [];
+			for(var i = 1; i <= 3; i++){
+				var x = 100 * i, y = 100 * i + 100;
+				var sunrays = $px.fac.newSunrays(x, y, {debug: true});
+				sunrays.addPoint(x -30, y - 30);
+				sunrays.addPoint(x +30, y + 30);
+				points.push(sunrays);
+			}
 			var end1 = utlx.fac.newGrabbable(100, 100);
 			var end2 = utlx.fac.newGrabbable(400, 400);
+			omega = $px.fac.newOmega(end1, end2, {debug: true}).addPoints(points);
 
-			omega = $px.fac.newOmega(end1, end2, {debug: true}).addPoints([spark1, spark2, spark3]);
+			points = [];
+			clay = $px.fac.newClay(350, 100, {debug: true});
+			clay.addPoint(320, 60);
+			clay.addPoint(390, 70);
+			clay.addPoint(370, 130);
+			clay.addPoint(300, 100);
+		};
+
+		var drawBackground = function(){
+			$p.background(BACKGROUND_COLOR);
+
+			$p.stroke(BACKGROUND_COLOR - 8);
+			for(var i = 10; i < CANVAS_WIDTH; i += 10) $p.line(i, 0, i, CANVAS_HEIGTH);
+			for(var i = 10; i < CANVAS_HEIGTH; i += 10) $p.line(0, i, CANVAS_HEIGTH, i);
 		};
 
 		$p.draw = function(){
-			$p.background(64);
-			omega.update($p.mouseX, $p.mouseY).render();
-			spark1.update($p.mouseX, $p.mouseY).render();
-			spark2.update($p.mouseX, $p.mouseY).render();
-			spark3.update($p.mouseX, $p.mouseY).render();
+			drawBackground();
+
+			switch(layer % 3){
+				case LAYER_OMEGA_ANCHORS:
+					var opts = {anchorWink: true};
+					break;
+				case LAYER_OMEGA_POINTS:
+					var opts = {centerWink: true};
+					break;
+				case LAYER_OMEGA_POINTS_POINTS:
+					var opts = {pointsWink: true};
+					break;
+			}
+			omega.update($p.mouseX, $p.mouseY).render(opts);
+			for(var i = 0; i < omega.points.length; i++) omega.points[i].update($p.mouseX, $p.mouseY).render(opts);
+
+			clay.update($p.mouseX, $p.mouseY).render(opts);
 		};
 
 		$p.mousePressed = function(){
-			switch(layer % 4){
-				case 0:
+			switch(layer % 3){
+				case LAYER_OMEGA_ANCHORS:
 					omega.grabAnchors($p.mouseX, $p.mouseY);
 					break;
-				case 1:
-					omega.grabPoints($p.mouseX, $p.mouseY);
+				case LAYER_OMEGA_POINTS:
+					for(var i = 0; i < omega.points.length; i++) omega.points[i].grab($p.mouseX, $p.mouseY);
 					break;
-				case 2:
-					spark1.grab($p.mouseX, $p.mouseY);
-					spark2.grab($p.mouseX, $p.mouseY);
-					spark3.grab($p.mouseX, $p.mouseY);
-					break;
-				case 3:
-					spark1.grabPoints($p.mouseX, $p.mouseY);
-					spark2.grabPoints($p.mouseX, $p.mouseY);
-					spark3.grabPoints($p.mouseX, $p.mouseY);
+				case LAYER_OMEGA_POINTS_POINTS:
+					for(var i = 0; i < omega.points.length; i++) omega.points[i].grabPoints($p.mouseX, $p.mouseY);
 					break;
 			}
+			clay.grab($p.mouseX, $p.mouseY);
+			clay.grabPoints($p.mouseX, $p.mouseY);
 		};
 
 		$p.mouseReleased = function(){
 			omega.release();
-			spark1.release();
-			spark2.release();
-			spark3.release();
+			clay.release();
 		};
 
 		$p.setup();
