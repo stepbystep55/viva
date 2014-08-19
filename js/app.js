@@ -26,19 +26,15 @@ define(['jquery', 'pjs', 'utl', 'utlx2', 'pjsx2'], function($, $p, utl, utlx, $p
 			$p.size(CANVAS_WIDTH, CANVAS_HEIGTH);
 			$p.frameRate(10);
 
-			var points = [];
-			for(var i = 1; i <= 3; i++){
-				var x = 100 * i, y = 100 * i + 100;
-				var sunrays = $px.fac.newSunrays(x, y, {debug: true});
-				sunrays.addPoint(x -30, y - 30);
-				sunrays.addPoint(x +30, y + 30);
-				points.push(sunrays);
-			}
 			var end1 = utlx.fac.newGrabbable(100, 100);
 			var end2 = utlx.fac.newGrabbable(400, 400);
-			omega = $px.fac.newOmega(end1, end2, {debug: true}).addPoints(points);
+			omega = $px.fac.newOmega(end1, end2, {debug: true});
+			for(var i = 1; i <= 3; i++){
+				var x = 100 * i, y = 100 * i + 100;
+				omega.addPoint(x, y);
+			}
 
-			points = [];
+			var points = [];
 			clay = $px.fac.newClay(350, 100, {debug: true});
 			clay.addPoint(320, 60);
 			clay.addPoint(390, 70);

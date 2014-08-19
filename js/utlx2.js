@@ -167,7 +167,7 @@ define(['underscore', 'utl'], function(_, utl){
   }
   sunrays.addPoint = function(x, y){
     var args = this.translateArgs(x, y);
-    this.points.push(Object.create(grabbable).init(args.x, args.y));
+    this.addPoints(Object.create(grabbable).init(args.x, args.y));
     return this;
   };
   sunrays.addPoints = function(pArr){
@@ -229,15 +229,15 @@ define(['underscore', 'utl'], function(_, utl){
       var angleChanged = utl.tri.ang(previousAnchorStayedToAnchorMoved, currentAnchorStayedToAnchorMoved);
 
       for(var i = 0; i < this.points.length; i++){
-        this._movePoint(this.points[i], anchorStayed, propotionChanged, angleChanged);
+        this.movePoint(this.points[i], anchorStayed, propotionChanged, angleChanged);
         if(this.points[i].points){
           for(var k = 0; k < this.points[i].points.length; k++){
-            this._movePoint(this.points[i].points[k], anchorStayed, propotionChanged, angleChanged);
+            this.movePoint(this.points[i].points[k], anchorStayed, propotionChanged, angleChanged);
           }
         }
       }
     }
-    , _movePoint: function(point, anchorStayed, propotionChanged, angleChanged){
+    , movePoint: function(point, anchorStayed, propotionChanged, angleChanged){
       var anchorStayedToPoint = point.diff(anchorStayed);
       anchorStayedToPoint = utl.tri.mv(anchorStayedToPoint, angleChanged);
       anchorStayedToPoint = utl.tri.mult(anchorStayedToPoint, propotionChanged);
@@ -306,5 +306,9 @@ define(['underscore', 'utl'], function(_, utl){
 
   return {
     fac: factory
+    , movable: movable
+    , grabbable: grabbable
+    , sunrays: sunrays
+    , histogram: histogram
   };
 });
