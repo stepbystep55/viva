@@ -29,8 +29,10 @@ define(['jquery', 'pjs', 'utl', 'utlx2', 'pjsx2'], function($, $p, utl, utlx, $p
 			var end1 = utlx.fac.newGrabbable(100, 100);
 			var end2 = utlx.fac.newGrabbable(400, 400);
 			omega = $px.fac.newOmega(end1, end2, {debug: true});
+			//omega = $px.fac.newOmega(end1, end2, {debug: true, bezier: true});
 			for(var i = 1; i <= 3; i++){
 				var x = 100 * i, y = 100 * i + 100;
+				if(i == 2) y += i * i * 10;
 				omega.addPoint(x, y);
 			}
 

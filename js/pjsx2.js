@@ -4,6 +4,25 @@ define(['underscore', 'jquery', 'utl', 'utlx2', 'pjs'], function(_, $, utl, utlx
   var fillDefault = function(){ $p.fill(0); };
   var fillWink = function(){ $p.fill(40, 40, 40); };
 
+  /*
+   * grabbable with render function
+   */
+  var grabbable = {name: 'pGrabbable'};
+
+  for(var key in utlx.grabbable) grabbable[key] = utlx.grabbable[key];
+
+  grabbable.update = function(opts){
+    // nothing
+    return this;
+  };
+  grabbable.render = function(opts){
+    if(_.isNull(opts) || _.isUndefined(opts)) opts = {};
+    (opts.anchorWink) ? fillWink() : fillDefault();
+    $p.ellipse(this.x, this.y, 10, 10);
+
+    return this;
+  };
+
 
   /*
    * clay
@@ -35,7 +54,7 @@ define(['underscore', 'jquery', 'utl', 'utlx2', 'pjs'], function(_, $, utl, utlx
 
 
   /*
-   * sunray with render function
+   * sunrays with render function
    */
   var sunrays = {name: 'pSunrays'};
 
@@ -49,6 +68,7 @@ define(['underscore', 'jquery', 'utl', 'utlx2', 'pjs'], function(_, $, utl, utlx
 
     (opts.anchorWink) ? fillWink() : fillDefault();
     for(var i = 0; i < this.points.length; i++) $p.ellipse(this.points[i].x, this.points[i].y, 10, 10);
+
     return this;
   };
 
@@ -58,13 +78,34 @@ define(['underscore', 'jquery', 'utl', 'utlx2', 'pjs'], function(_, $, utl, utlx
    */
   var omega = {name: 'omega'};
 
-  for(var key in utlx.histogram) omega[key] = utlx.histogram[key];
+  for(var key in utlx.histogram){
+    if(key === 'init'){
+      omega.init = function(x, y, opts){
+        if(_.isNull(opts) || _.isUndefined(opts)) opts = {};
+        utlx.histogram.init.call(this, x, y, opts);
+        if(opts.bezier) this.bezier = true;
+        this.HANDLE_LENGTH = 30;
+
+        return this;
+      }
+    }else{
+      omega[key] = utlx.histogram[key];
+    }
+  }
 
   omega.addPoint = function(x, y, opts){
-    var point = Object.create(sunrays).init(x, y, opts);
-    point.addPoint(x -30, y - 30);
-    point.addPoint(x +30, y + 30);
+    var point;
+    if(this.bezier){
+      point = Object.create(sunrays).init(x, y, opts);
+      var slope = utl.tri.sub(this.a1, this.a2, true);
+      point.addPoint(x - slope.x * this.HANDLE_LENGTH, y - slope.y * this.HANDLE_LENGTH);
+      point.addPoint(x + slope.x * this.HANDLE_LENGTH, y + slope.y * this.HANDLE_LENGTH);
+      this.addPoints(point);
+    }else{
+      point = Object.create(grabbable).init(x, y, opts);
+    }
     this.addPoints(point);
+
     return this;
   };
   omega.render = function(opts){
@@ -83,13 +124,21 @@ define(['underscore', 'jquery', 'utl', 'utlx2', 'pjs'], function(_, $, utl, utlx
     }
 
     $p.beginShape();
-    $p.vertex(this.points[0].x, this.points[0].y);
-    for(var i = 1; i < this.points.length; i++){
-      $p.bezierVertex(
-        this.points[i-1].points[1].x , this.points[i-1].points[1].y
-        , this.points[i].points[0].x , this.points[i].points[0].y
-        , this.points[i].x , this.points[i].y
-      );
+    if(this.bezier){
+      $p.vertex(this.points[0].x, this.points[0].y);
+      for(var i = 1; i < this.points.length; i++){
+        $p.bezierVertex(
+          this.points[i-1].points[1].x , this.points[i-1].points[1].y
+          , this.points[i].points[0].x , this.points[i].points[0].y
+          , this.points[i].x , this.points[i].y
+        );
+      }
+    }else{
+      $p.curveVertex(this.points[0].x, this.points[0].y);
+      for(var i = 0; i < this.points.length; i++){
+        $p.curveVertex(this.points[i].x, this.points[i].y);
+      }
+      $p.curveVertex(this.points[0].x, this.points[0].y);
     }
     $p.endShape();
 
