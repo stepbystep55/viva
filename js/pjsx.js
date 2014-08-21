@@ -1,100 +1,155 @@
-define(['underscore', 'jquery', 'utl', 'utlx3', 'pjs'], function(_, $, utl, utlx, $p){
+define(['underscore', 'jquery', 'utl', 'utlx', 'pjs'], function(_, $, utl, utlx, $p){
   'use strict';
 
-  var omega = {
-    init: function(a1, a2, opts){
-      if(_.isNull(opts) || _.isUndefined(opts)) opts = {};
-      if(opts.debug) this.debug = true;
-      this.spine = utlx.fac.newOmega(a1, a2, opts);
-      return this;
-    }
-    , addPoints: function(pArr){
-      for(var i = 0; i < pArr.length; i++){
-        var control = utl.tri.add(pArr[i], utl.tri.sub(this.spine.a2, this.spine.a1));
-        pArr[i].control = utlx.fac.newGrabbableVector(control.x, control.y);
-      }
-      this.spine.addPoints(pArr);
-      return this;
-    }
-    , grab: function(){
-      this.spine.a1.grab($p.mouseX, $p.mouseY);
-      this.spine.a2.grab($p.mouseX, $p.mouseY);
-      for(var i = 0; i < this.spine.pArr.length; i++) this.spine.pArr[i].grab($p.mouseX, $p.mouseY);
-      return this;
-    }
-    , release: function(){
-      this.spine.a1.release();
-      this.spine.a2.release();
-      for(var i = 0; i < this.spine.pArr.length; i++) this.spine.pArr[i].release();
-      return this;
-    }
-    , update: function(){
-      this.spine.a1.moveTo($p.mouseX, $p.mouseY);
-      this.spine.a2.moveTo($p.mouseX, $p.mouseY);
-      for(var i = 0; i < this.spine.pArr.length; i++) this.spine.pArr[i].moveTo($p.mouseX, $p.mouseY);
-      return this;
-    }
-    , render: function(){
-      $p.stroke(0, 0, 0);
-      $p.ellipse(this.spine.a1.x, this.spine.a1.y, 10, 10);
-      $p.ellipse(this.spine.a2.x, this.spine.a2.y, 10, 10);
-      $p.line(this.spine.a1.x, this.spine.a1.y, this.spine.a2.x, this.spine.a2.y);
+  var fillDefault = function(){ $p.fill(0); };
+  var fillWink = function(){ $p.fill(40, 40, 40); };
 
-      if(this.debug){
-        $p.textSize(8);
-        $p.text('' + Math.round(this.spine.a1.x) + ',' + Math.round(this.spine.a1.y), this.spine.a1.x, this.spine.a1.y);
-        $p.text('' + Math.round(this.spine.a2.x) + ',' + Math.round(this.spine.a2.y), this.spine.a2.x, this.spine.a2.y);
-      }
+  /*
+   * grabbable with render function
+   */
+  var grabbable = {name: 'pGrabbable'};
 
-      for(var i = 0; i < this.spine.pArr.length; i++){
-        $p.ellipse(this.spine.pArr[i].x, this.spine.pArr[i].y, 10, 10);
-        $p.ellipse(this.spine.pArr[i].projected.x, this.spine.pArr[i].projected.y, 5, 5);
-        $p.ellipse(this.spine.pArr[i].control.x, this.spine.pArr[i].control.y, 5, 5);
-        if(this.debug){
-          $p.textSize(8);
-          $p.text('' + Math.round(this.spine.pArr[i].x) + ',' + Math.round(this.spine.pArr[i].y), this.spine.pArr[i].x, this.spine.pArr[i].y);
-        }
-      }
-      return this;
-    }
+  for(var key in utlx.grabbable) grabbable[key] = utlx.grabbable[key];
+
+  grabbable.update = function(opts){
+    // nothing
+    return this;
+  };
+  grabbable.render = function(opts){
+    if(_.isNull(opts) || _.isUndefined(opts)) opts = {};
+    (opts.anchorWink) ? fillWink() : fillDefault();
+    $p.ellipse(this.x, this.y, 10, 10);
+
+    return this;
   };
 
-  var spark = {
-    init: function(c, opts){
-      if(_.isNull(opts) || _.isUndefined(opts)) opts = {};
-      this.spine = utlx.fac.newSpark(c);
-      console.log('c='+this.spine.c.name+': '+this.spine.c.x+', '+this.spine.c.y);
-      if(opts.debug) this.debug = true;
-      return this;
+
+  /*
+   * clay
+   */
+  var clay = {name: 'clay'};
+
+  for(var key in utlx.sunrays) clay[key] = utlx.sunrays[key];
+
+  clay.render = function(opts){
+    if(_.isNull(opts) || _.isUndefined(opts)) opts = {};
+
+    (opts.anchorWink) ? fillWink() : fillDefault();
+    $p.ellipse(this.x, this.y, 10, 10);
+
+    (opts.anchorWink) ? fillWink() : fillDefault();
+    $p.beginShape();
+    $p.noFill();
+    $p.curveVertex(this.points[0].x, this.points[0].y);
+    for(var i = 0; i < this.points.length; i++){
+      $p.ellipse(this.points[i].x, this.points[i].y, 5, 5);
+      $p.curveVertex(this.points[i].x, this.points[i].y);
     }
-    , addPoints: function(pArr){
-      this.spine.addPoints(pArr);
-      return this;
-    }
-    , update: function(){
-      this.spine.c.moveTo($p.mouseX, $p.mouseY);
-      for(var i = 0; i < this.spine.pArr.length; i++) this.spine.pArr[i].moveTo($p.mouseX, $p.mouseY);
-      return this;
-    }
-    , grab: function(){
-      this.spine.c.grab($p.mouseX, $p.mouseY);
-      for(var i = 0; i < this.spine.pArr.length; i++) this.spine.pArr[i].grab($p.mouseX, $p.mouseY);
-      return this;
-    }
-    , release: function(){
-      this.spine.c.release();
-      for(var i = 0; i < this.spine.pArr.length; i++) this.spine.pArr[i].release();
-      return this;
-    }
-    , render: function(){
-      $p.stroke(0, 0, 0);
-      $p.fill(0);
-      $p.ellipse(this.spine.c.x, this.spine.c.y, 10, 10);
-      $p.fill(255);
-      for(var i = 0; i < this.spine.pArr.length; i++) $p.ellipse(this.spine.pArr[i].x, this.spine.pArr[i].y, 10, 10);
-      return this;
-    }
+    //$p.curveVertex(this.points[this.points.length - 1].x, this.points[this.points.length - 1].y);
+    $p.curveVertex(this.points[0].x, this.points[0].y);
+    $p.endShape();
+
+    return this;
   };
+
+
+  /*
+   * sunrays with render function
+   */
+  var sunrays = {name: 'pSunrays'};
+
+  for(var key in utlx.sunrays) sunrays[key] = utlx.sunrays[key];
+
+  sunrays.render = function(opts){
+    if(_.isNull(opts) || _.isUndefined(opts)) opts = {};
+
+    (opts.anchorWink) ? fillWink() : fillDefault();
+    $p.ellipse(this.x, this.y, 10, 10);
+
+    (opts.anchorWink) ? fillWink() : fillDefault();
+    for(var i = 0; i < this.points.length; i++) $p.ellipse(this.points[i].x, this.points[i].y, 10, 10);
+
+    return this;
+  };
+
+
+  /*
+   * omega
+   */
+  var omega = {name: 'omega'};
+
+  for(var key in utlx.histogram){
+    if(key === 'init'){
+      omega.init = function(x, y, opts){
+        if(_.isNull(opts) || _.isUndefined(opts)) opts = {};
+        utlx.histogram.init.call(this, x, y, opts);
+        if(opts.bezier) this.bezier = true; // normal curve is default
+        this.HANDLE_LENGTH = 30;
+
+        return this;
+      }
+    }else{
+      omega[key] = utlx.histogram[key];
+    }
+  }
+
+  omega.addPoint = function(x, y, opts){
+    var point;
+    if(this.bezier){
+      point = Object.create(sunrays).init(x, y, opts);
+      var slope = utl.tri.sub(this.a1, this.a2, true);
+      point.addPoint(x + slope.x * this.HANDLE_LENGTH, y + slope.y * this.HANDLE_LENGTH);
+      point.addPoint(x - slope.x * this.HANDLE_LENGTH, y - slope.y * this.HANDLE_LENGTH);
+    }else{
+      point = Object.create(grabbable).init(x, y, opts);
+    }
+    this.addPoints(point);
+
+    return this;
+  };
+  omega.render = function(opts){
+    if(_.isNull(opts) || _.isUndefined(opts)) opts = {};
+
+    (opts.anchorWink) ? fillWink() : fillDefault();
+    $p.ellipse(this.a1.x, this.a1.y, 10, 10);
+    $p.ellipse(this.a2.x, this.a2.y, 10, 10);
+    $p.stroke(0, 0, 0);
+    $p.line(this.a1.x, this.a1.y, this.a2.x, this.a2.y);
+
+    if(this.debug){
+      $p.textSize(8);
+      $p.text('' + Math.round(this.a1.x) + ',' + Math.round(this.a1.y), this.a1.x, this.a1.y);
+      $p.text('' + Math.round(this.a2.x) + ',' + Math.round(this.a2.y), this.a2.x, this.a2.y);
+    }
+
+    if(this.points.length < 3) return this;
+
+    $p.beginShape();
+    if(this.bezier){
+      $p.vertex(this.points[0].x, this.points[0].y);
+      for(var i = 1; i < this.points.length; i++){
+        $p.bezierVertex(
+          this.points[i-1].points[1].x , this.points[i-1].points[1].y
+          , this.points[i].points[0].x , this.points[i].points[0].y
+          , this.points[i].x , this.points[i].y
+        );
+      }
+    }else{
+      $p.curveVertex(this.points[0].x, this.points[0].y);
+      for(var i = 1; i < this.points.length - 1; i++) $p.curveVertex(this.points[i].x, this.points[i].y);
+      $p.curveVertex(this.points[this.points.length - 1].x, this.points[this.points.length - 1].y);
+    }
+    $p.endShape();
+
+    $p.beginShape();
+      $p.vertex(this.a1.x, this.a1.y);
+      for(var i = 0; i < this.points.length; i++) $p.vertex(this.points[i].x, this.points[i].y);
+      $p.vertex(this.a2.x, this.a2.y);
+    $p.endShape();
+
+    return this;
+  };
+
 
   var factory = {
     newOmega: function(a1, a2, opts){
@@ -102,11 +157,11 @@ define(['underscore', 'jquery', 'utl', 'utlx3', 'pjs'], function(_, $, utl, utlx
       opts.noScaling = true;
       return Object.create(omega).init(a1, a2, opts);
     }
-    , newPair: function(c, s, opts){
-      return Object.create(spark).init(c, opts).addPoints(s);
+    , newClay: function(cx, cy, opts){
+      return Object.create(clay).init(cx, cy, opts);
     }
-    , newSpark: function(c, opts){
-      return Object.create(spark).init(c, opts);
+    , newSunrays: function(cx, cy, opts){
+      return Object.create(sunrays).init(cx, cy, opts);
     }
   };
 

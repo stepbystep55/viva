@@ -1,4 +1,4 @@
-define(['jquery', 'pjs', 'utl', 'utlx2', 'pjsx2'], function($, $p, utl, utlx, $px){
+define(['jquery', 'pjs', 'utl', 'utlx', 'pjsx'], function($, $p, utl, utlx, $px){
 	'use strict';
 
 	var CANVAS_WIDTH = 500;
