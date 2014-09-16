@@ -1,18 +1,22 @@
 define(['underscore', 'utl'], function(_, utl){
   'use strict';
 
+  var log = function(str){console.log(str);}
+
   /*
    * movable vector. you can move this vector anywhere you want.
    */
   var movable = {
     name: 'movable'
-    , init: function(x, y){ // you can call this as 'init(p)'
-      var args = this.translateArgs(x, y);
+    , init: function(x, y, opts){ // you can call this as 'init(p)'
+      var args = this.translateArgs(x, y, opts);
 
       this.x = args.x;
       this.y = args.y;
       this.prevX = args.x; // previous x position
       this.prevY = args.y; // previous y position
+
+      this.opts = args.opts;
 
       this.callbacks = [];
 
@@ -78,6 +82,9 @@ define(['underscore', 'utl'], function(_, utl){
       }
       throw 'Illegal arguments: x='+x+', y='+y+', opts='+opts;
     }
+    , dump: function(){
+      return '(x, y)=('+this.x+', '+this.y+'), (prevX, prevY)=('+this.prevX+', '+this.prevY+')';
+    }
   };
 
   /*
@@ -92,7 +99,7 @@ define(['underscore', 'utl'], function(_, utl){
       grabbable.init = function(x, y, opts){ // you can call this as 'init(p, opts)'
         var args = movable.translateArgs(x, y, opts);
         if(!args.opts) args.opts = {};
-        this.rad4grab = args.opts.rad4grab || 10; // radious where you  can grab this
+        this.rad4grab = args.opts.rad4grab || 10; // radious where you can grab this
         this.grabbed = false; // whether you have grabbed this
         movable.init.call(this, args.x, args.y, args.opts);
         return this;
@@ -110,21 +117,25 @@ define(['underscore', 'utl'], function(_, utl){
       grabbable[key] = movable[key];
     }
   }
-  // grab this
+  // grab this. return true if success to grab
   grabbable.grab = function(x, y){
     var args = this.translateArgs(x, y);
     if(utl.tri.dist(this, {x: args.x, y: args.y}) < this.rad4grab) this.grabbed = true;
-    return this;
+    return this.grabbed;
   };
-  // release this
+  // release this. always return true
   grabbable.release = function(){
     this.grabbed = false;
-    return this;
+    return true;
   };
   grabbable.canMove = function(forced){
     if(this.grabbed) return true;
     if(forced) return true;
     return false;
+  };
+  // overrridable
+  grabbable.update = function(){
+    return this;
   };
 
   /*
@@ -140,6 +151,7 @@ define(['underscore', 'utl'], function(_, utl){
       sunrays.init = function(x, y, opts){
         var args = grabbable.translateArgs(x, y, opts);
         grabbable.init.call(this, args.x, args.y, args.opts);
+        this.rad4spawn = args.opts.rad4spawn || 10; // radious of point that can spawning points
         this.points = [];
         return this;
       };
@@ -150,7 +162,7 @@ define(['underscore', 'utl'], function(_, utl){
         var args = grabbable.translateArgs(x, y, opts);
         if(!this.canMove(args.opts.forced)) return this;
         grabbable.move.call(this, args.x, args.y, args.opts);
-        if(!opts.alone){
+        if(!args.opts.alone){
           for(var i = 0; i < this.points.length; i++) this.points[i].move(this.track(), {forced: true});
         }
         return this;
@@ -158,21 +170,49 @@ define(['underscore', 'utl'], function(_, utl){
     }else if(key === 'release'){
       sunrays.release = function(){
         grabbable.release.call(this);
-        for(var i = 0; i < this.points.length; i++) this.points[i].release();
-        return this;
+        this.releasePoints();
+        return true;
       };
     }else{
       sunrays[key] = grabbable[key];
     }
   }
-  sunrays.addPoint = function(x, y){
-    var args = this.translateArgs(x, y);
-    this.addPoints(Object.create(grabbable).init(args.x, args.y));
+  sunrays.addPoint = function(x, y, opts){ // opts not required
+    var args = this.translateArgs(x, y, opts);
+    this.addPoints(Object.create(grabbable).init(args.x, args.y), args.opts);
     return this;
   };
-  sunrays.addPoints = function(pArr){
+  sunrays.addPoints = function(pArr, opts){ // opts not required
     if(!_.isArray(pArr)) pArr = [pArr]; // pArr can be one value
-    for(var i = 0; i < pArr.length; i++) this.points.push(pArr[i]);
+    var idx2add = this.points.length;
+    if(!_.isNull(opts) && !_.isUndefined(opts) && _.has(opts, 'idx')) idx2add = opts.idx;
+    for(var i = 0; i < pArr.length; i++) this.points.splice(idx2add + i, 0, pArr[i]);
+    return this;
+  };
+  sunrays.spawnPoint = function(x, y){
+    var args = this.translateArgs(x, y);
+    // find the spawnable
+    var idx = 0;
+    var canSpawn = false;
+    for(; idx < this.points.length; idx++){
+      if(utl.tri.dist(this.points[idx], {x: args.x, y: args.y}) < this.rad4spawn){
+        canSpawn = true;
+        break;
+      }
+    }
+    if(!canSpawn) return this;
+
+    // spawn
+    var loc = null;
+    if(idx == 0){
+      var centerToSpawnable = utl.tri.sub(this.points[idx], this);
+      var centerToSpawned = utl.tri.mv(centerToSpawnable, Math.PI / 6);
+      loc = utl.tri.add(this, centerToSpawned);
+    }else{
+      loc = utl.tri.mid(this.points[idx - 1], this.points[idx]);
+    }
+    this.addPoint(loc.x, loc.y, {idx: idx});
+
     return this;
   };
   sunrays.update = function(x, y){
@@ -183,8 +223,12 @@ define(['underscore', 'utl'], function(_, utl){
   };
   sunrays.grabPoints = function(x, y){
     var args = this.translateArgs(x, y);
-    for(var i = 0; i < this.points.length; i++) this.points[i].grab(args.x, args.y);
-    return this;
+    for(var i = 0; i < this.points.length; i++) if(this.points[i].grab(args.x, args.y)) return true;
+    return false;
+  };
+  sunrays.releasePoints = function(){
+    for(var i = 0; i < this.points.length; i++) this.points[i].release();
+    return true;
   };
 
   // two anchors and points that are affected by the anchors' moving.
@@ -196,14 +240,28 @@ define(['underscore', 'utl'], function(_, utl){
       this.points = [];
       if(!opts) opts = {};
       this.noScaling = opts.noScaling || false;
+      this.rad4spawn = opts.rad4spawn || 10; // radious of point that can spawning points
 
       this.a1.pushCallbacks(this, this.respondForAnchor1);
       this.a2.pushCallbacks(this, this.respondForAnchor2);
 
       return this;
     }
-    , addPoints: function(pArr){
+    , addPoint: function(x, y, opts){
+      var point = Object.create(sunrays).init(x, y, opts);
+      var slope = utl.tri.sub(this.a1, this.a2, true); // for setting handlers paralled with the axis
+      point.addPoint(x + slope.x * this.HANDLE_LENGTH, y + slope.y * this.HANDLE_LENGTH);
+      point.addPoint(x - slope.x * this.HANDLE_LENGTH, y - slope.y * this.HANDLE_LENGTH);
+      this.addPoints(point, opts);
+
+      return this;
+    }
+    , addPoints: function(pArr, opts){ // opts not required
       if(!_.isArray(pArr)) pArr = [pArr]; // pArr can be one value
+
+      var idx2add = this.points.length;
+      if(!_.isNull(opts) && !_.isUndefined(opts) && _.has(opts, 'idx')) idx2add = opts.idx;
+
       for(var i = 0; i < pArr.length; i++){
         pArr[i].projected = Object.create(movable).init(utl.tri.prj(this.a1, this.a2, pArr[i]));
         pArr[i].pushCallbacks(this, this.respondForPoint, [pArr[i]]);
@@ -212,8 +270,31 @@ define(['underscore', 'utl'], function(_, utl){
             pArr[i].points[k].projected = Object.create(movable).init(utl.tri.prj(this.a1, this.a2, pArr[i].points[k]));
           }
         }
-        this.points.push(pArr[i]);
+        this.points.splice(idx2add + i, 0, pArr[i]);
       }
+
+      return this;
+    }
+    , spawnPoint: function(x, y){
+      // find the spawnable
+      var idx = 0;
+      var canSpawn = false;
+      for(; idx < this.points.length; idx++){
+        if(utl.tri.dist(this.points[idx], {x: x, y: y}) < this.rad4spawn){
+          canSpawn = true;
+          break;
+        }
+      }
+      if(!canSpawn) return this;
+
+      // spawn
+      if(idx == 0){
+        // currently nothing
+      }else{
+        var loc = utl.tri.mid(this.points[idx - 1], this.points[idx]);
+        this.addPoint(loc.x, loc.y, {idx: idx});
+      }
+
       return this;
     }
     , respondForAnchor1: function(){
@@ -264,27 +345,29 @@ define(['underscore', 'utl'], function(_, utl){
     }
 
     , grab: function(x, y){
-      return this.grabAnchors(x, y).grabPoints(x, y);
+      if(this.grabAnchors(x, y)) return true;
+      if(grabPoints(x, y)) return true;
+      return false;
     }
     , grabAnchors: function(x, y){
-      this.a1.grab(x, y);
-      this.a2.grab(x, y);
-      return this;
+      if(this.a1.grab(x, y)) return true;
+      if(this.a2.grab(x, y)) return true;
+      return false;
     }
     , grabPoints: function(x, y){
-      for(var i = 0; i < this.points.length; i++) this.points[i].grab(x, y);
-      return this;
+      for(var i = 0; i < this.points.length; i++) if(this.points[i].grab(x, y)) return true;
+      return false;
     }
     , release: function(){
       this.a1.release();
       this.a2.release();
       for(var i = 0; i < this.points.length; i++) this.points[i].release();
-      return this;
+      return true;
     }
     , update: function(x, y){
       this.a1.moveTo(x, y);
       this.a2.moveTo(x, y);
-      for(var i = 0; i < this.points.length; i++) this.points[i].moveTo(x, y);
+      for(var i = 0; i < this.points.length; i++) this.points[i].update(x, y);
       return this;
     }
   };

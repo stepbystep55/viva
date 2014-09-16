@@ -12,6 +12,9 @@ require.config({
 		, processing: [
 			'lib/processing-api.min.1.4.8'
 		]
+		, hammer: [
+			'lib/hammer.min'
+		]
 	}
 	, shim: {
 		underscore: {

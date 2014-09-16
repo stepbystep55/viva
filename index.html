@@ -5,8 +5,30 @@
   <META HTTP-EQUIV="PRAGMA" CONTENT="NO-CACHE">
 </head>
 <body style="background-color: #000;">
-  <canvas id="canvas"></canvas>
+  <table>
+    <tr>
+      <td>
+        <input type="button" id="loopSwitch" name="loopSwitch" value="loop" />
+      </td>
+      <td>
+        <canvas id="canvas"></canvas>
+      </td>
+      <td>
+        <input type="button" id="omegaAdder" name="omegaAdder" value="omega" />
+        <br/><br/>
+        <br/><br/>
+        <input type="button" id="zoomin" name="zoomein" value=" + " />
+        <br/><br/>
+        <input type="button" id="zoomout" name="zoomeout" value=" - " />
+        <br/><br/>
+        <br/><br/>
+        <input type="button" id="goup" name="goup" value=" ↑ " />
+        <br/><br/>
+      </td>
+    </tr>
+  </table>
+  &nbsp;
   <script src="js/lib/require.2.1.8.js" data-main="js/main"></script>
-  <input type="button" id="switcher" name="switcher" value="switch" />
+  <br/>
 </body>
 </html>

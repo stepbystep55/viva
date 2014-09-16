@@ -1,4 +1,4 @@
-define(['jquery', 'pjs', 'utl', 'utlx', 'pjsx'], function($, $p, utl, utlx, $px){
+define(['jquery', 'hammer', 'pjs', 'utl', 'utlx', 'pjsx'], function($, Hammer, $p, utl, utlx, $px){
 	'use strict';
 
 	var CANVAS_WIDTH = 500;
@@ -6,21 +6,28 @@ define(['jquery', 'pjs', 'utl', 'utlx', 'pjsx'], function($, $p, utl, utlx, $px)
 
 	var BACKGROUND_COLOR = 64;
 
-	var LAYER_OMEGA_ANCHORS = 0
-	var LAYER_OMEGA_POINTS = 1;
-	var LAYER_OMEGA_POINTS_POINTS = 2;
-	var layer = LAYER_OMEGA_ANCHORS;
-	$('#switcher').on('click', function(e){ ++layer; });
-
 	var loopable = false;
-	$('#btn').click(function(){
+	$('#loopSwitch').on('click', function(e){
 		loopable = !loopable;
 		(loopable) ? $p.loop() : $p.noLoop();
 	});
 
-	var app = function(){
+	var FACTOR = 12 / 10;
+	$('#zoomin').on('click', function(e){
+		$p.externals.context.scale(FACTOR, FACTOR);
+	});
+	$('#zoomout').on('click', function(e){
+		$p.externals.context.scale(1 / FACTOR, 1 / FACTOR);
+	});
+	var STEP = 10;
+	$('#goup').on('click', function(e){
+		$p.externals.context.translate(0, -STEP);
+	});
 
-		var omega, clay;
+	var omegas = [];
+	var clay = null;
+
+	var app = function(){
 
 		$p.setup = function(){
 			$p.size(CANVAS_WIDTH, CANVAS_HEIGTH);
@@ -28,20 +35,17 @@ define(['jquery', 'pjs', 'utl', 'utlx', 'pjsx'], function($, $p, utl, utlx, $px)
 
 			var end1 = utlx.fac.newGrabbable(100, 100);
 			var end2 = utlx.fac.newGrabbable(400, 400);
-			omega = $px.fac.newOmega(end1, end2, {debug: true});
-			//omega = $px.fac.newOmega(end1, end2, {debug: true, bezier: true});
+			var omega = $px.fac.newOmega(end1, end2, {debug: true});
 			for(var i = 1; i <= 3; i++){
 				var x = 100 * i, y = 100 * i + 100;
 				if(i == 2) y += i * i * 10;
 				omega.addPoint(x, y);
 			}
+			omegas.push(omega);
 
-			var points = [];
-			clay = $px.fac.newClay(350, 100, {debug: true});
-			clay.addPoint(320, 60);
-			clay.addPoint(390, 70);
-			clay.addPoint(370, 130);
-			clay.addPoint(300, 100);
+			clay = $px.fac.newClay(300, 100, {debug: true});
+			clay.addPoint(350, 50);
+			clay.addPoint(350, 150);
 		};
 
 		var drawBackground = function(){
@@ -55,46 +59,43 @@ define(['jquery', 'pjs', 'utl', 'utlx', 'pjsx'], function($, $p, utl, utlx, $px)
 		$p.draw = function(){
 			drawBackground();
 
-			switch(layer % 3){
-				case LAYER_OMEGA_ANCHORS:
-					var opts = {anchorWink: true};
-					break;
-				case LAYER_OMEGA_POINTS:
-					var opts = {centerWink: true};
-					break;
-				case LAYER_OMEGA_POINTS_POINTS:
-					var opts = {pointsWink: true};
-					break;
+			for(var h = 0; h < omegas.length; h++){
+				var omega = omegas[h];
+				omega.update($p.mouseX, $p.mouseY).render();
+				omega.renderAnchors();
+				omega.renderPoints();
+				omega.renderPointsPoints();
 			}
-			omega.update($p.mouseX, $p.mouseY).render(opts);
-			for(var i = 0; i < omega.points.length; i++) omega.points[i].update($p.mouseX, $p.mouseY).render(opts);
-
-			clay.update($p.mouseX, $p.mouseY).render(opts);
+			clay.update($p.mouseX, $p.mouseY);
+			clay.render();
+			clay.renderCenter();
+			clay.renderPoints();
 		};
 
 		$p.mousePressed = function(){
-			switch(layer % 3){
-				case LAYER_OMEGA_ANCHORS:
-					omega.grabAnchors($p.mouseX, $p.mouseY);
-					break;
-				case LAYER_OMEGA_POINTS:
-					for(var i = 0; i < omega.points.length; i++) omega.points[i].grab($p.mouseX, $p.mouseY);
-					break;
-				case LAYER_OMEGA_POINTS_POINTS:
-					for(var i = 0; i < omega.points.length; i++) omega.points[i].grabPoints($p.mouseX, $p.mouseY);
-					break;
+			for(var h = 0; h < omegas.length; h++){
+				var omega = omegas[h];
+				if(omega.grabAnchors($p.mouseX, $p.mouseY)) return;
+				for(var i = 0; i < omega.points.length; i++) if(omega.points[i].grab($p.mouseX, $p.mouseY)) return;
+				for(var i = 0; i < omega.points.length; i++) if(omega.points[i].grabPoints($p.mouseX, $p.mouseY)) return;
 			}
-			clay.grab($p.mouseX, $p.mouseY);
-			clay.grabPoints($p.mouseX, $p.mouseY);
+			if(clay.grab($p.mouseX, $p.mouseY)) return;
+			if(clay.grabPoints($p.mouseX, $p.mouseY)) return;
 		};
 
 		$p.mouseReleased = function(){
-			omega.release();
+			for(var h = 0; h < omegas.length; h++) omegas[h].release();
 			clay.release();
 		};
 
 		$p.setup();
 	};
+
+	var hammertime = new Hammer($('#canvas').get(0));
+	hammertime.on('doubletap', function(e){
+		clay.spawnPoint($p.mouseX, $p.mouseY);
+		for(var i = 0; i < omegas.length; i++) omegas[i].spawnPoint($p.mouseX, $p.mouseY);
+	});
 
 	return app;
 });
