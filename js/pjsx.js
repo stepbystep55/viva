@@ -12,18 +12,25 @@ define(['underscore', 'jquery', 'utl', 'utlx', 'pjs'], function(_, $, utl, utlx,
 
   for(var key in utlx.sunrays) clay[key] = utlx.sunrays[key];
 
+  clay.color = utl.ren.hex2rgb('#000000');
+  clay.alpha = 255;
   clay.render = function(opts){
     if(_.isNull(opts) || _.isUndefined(opts)) opts = {};
 
-    if(this.points.length <= 3) return this;
+    if(this.points.length < 3) return this;
 
-    $p.noFill();
     $p.beginShape();
-    $p.curveVertex(this.points[0].x, this.points[0].y);
-    for(var i = 0; i < this.points.length - 1; i++) $p.curveVertex(this.points[i].x, this.points[i].y);
-    $p.curveVertex(this.points[this.points.length - 1].x, this.points[this.points.length - 1].y);
+    $p.vertex(this.points[0].x, this.points[0].y);
+    for(var i = 1; i < this.points.length; i++){
+      $p.bezierVertex(
+        this.points[i-1].points[1].x , this.points[i-1].points[1].y
+        , this.points[i].points[0].x , this.points[i].points[0].y
+        , this.points[i].x , this.points[i].y
+      );
+    }
     $p.endShape();
 
+    $p.fill(this.color.r, this.color.g, this.color.b, this.alpha);
     return this;
   };
   clay.renderCenter = function(){
@@ -34,6 +41,17 @@ define(['underscore', 'jquery', 'utl', 'utlx', 'pjs'], function(_, $, utl, utlx,
   clay.renderPoints = function(){
     $p.fill(0);
     for(var i = 0; i < this.points.length; i++) $p.ellipse(this.points[i].x, this.points[i].y, HANDLE_RADIUS, HANDLE_RADIUS);
+    return this;
+  };
+  clay.renderPointsPoints = function(){
+    $p.fill(0);
+    for(var i = 0; i < this.points.length; i++) {
+      for(var k = 0; k < this.points[i].points.length; k++){
+        if(i == 0 && k == 0) continue;
+        if(i == (this.points.length - 1) && k == (this.points[i].points.length - 1)) continue;
+        $p.ellipse(this.points[i].points[k].x, this.points[i].points[k].y, HANDLE_RADIUS, HANDLE_RADIUS);
+      }
+    }
     return this;
   };
 
@@ -47,7 +65,6 @@ define(['underscore', 'jquery', 'utl', 'utlx', 'pjs'], function(_, $, utl, utlx,
       omega.init = function(x, y, opts){
         if(_.isNull(opts) || _.isUndefined(opts)) opts = {};
         utlx.histogram.init.call(this, x, y, opts);
-        this.HANDLE_LENGTH = 30;
 
         return this;
       }
@@ -98,7 +115,8 @@ define(['underscore', 'jquery', 'utl', 'utlx', 'pjs'], function(_, $, utl, utlx,
     $p.fill(0);
     for(var i = 0; i < this.points.length; i++){
       for(var k = 0; k < this.points[i].points.length; k++){
-        //if(i == 0 && k == 0) continue;
+        if(i == 0 && k == 0) continue;
+        if(i == (this.points.length - 1) && k == (this.points[i].points.length - 1)) continue;
         $p.ellipse(this.points[i].points[k].x, this.points[i].points[k].y, HANDLE_RADIUS, HANDLE_RADIUS);
       }
     }

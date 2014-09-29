@@ -7,25 +7,53 @@ define(function(){
 	 */
 	var trigonometry = {
 
-		dist: function(p1, p2){
-			return Math.sqrt(Math.pow((p1.x - p2.x), 2) + Math.pow((p1.y - p2.y), 2));
+		// = For the sake of setting only one object for x without y. a can be undefined
+		to3args: function(x, y, a){
+			if(typeof x === 'number' && typeof y === 'number'){
+				return arguments;
+			}else if(typeof x === 'object'){
+				return [x.x, x.y, y];
+			}
+			throw 'Illegal arguments: ' + arguments;
+		}
+		, to5args: function(x1, y1, x2, y2, a){
+			if((typeof x1 === 'number' && typeof y1 === 'number')
+				&&(typeof x2 === 'number' && typeof y2 === 'number')){
+				return arguments;
+			}else if(typeof x1 === 'object' && typeof y1 === 'object'){
+				return [x1.x, x1.y, y1.x, y1.y, x2];
+			}
+			throw 'Illegal arguments: ' + arguments;
+		}
+
+		, dist: function(x1, y1, x2, y2){
+			// you can use this as dist(p1, p2)
+			var [x1, y1, x2, y2] = this.to5args(x1, y1, x2, y2);
+
+			return Math.sqrt(Math.pow((x1 - x2), 2) + Math.pow((y1 - y2), 2));
 		}
 
 		// = get the angle in radians between point1 and point2
-		, ang: function(p1, p2){
-			var pMag = Math.sqrt(p1.x * p1.x + p1.y * p1.y); // magnitude of p
-			var npx = p1.x / pMag; var npy = p1.y / pMag; // normalized
-			pMag = Math.sqrt(p2.x * p2.x + p2.y * p2.y); // magnitude of p2
-			var np2x = p2.x / pMag; var np2y = p2.y / pMag; // normalized
+		, ang: function(x1, y1, x2, y2){
+			// you can use this as ang(p1, p2)
+			var [x1, y1, x2, y2] = this.to5args(x1, y1, x2, y2);
+
+			var pMag = Math.sqrt(x1 * x1 + y1 * y1); // magnitude of p
+			var npx = x1 / pMag; var npy = y1 / pMag; // normalized
+			pMag = Math.sqrt(x2 * x2 + y2 * y2); // magnitude of p2
+			var np2x = x2 / pMag; var np2y = y2 / pMag; // normalized
 			return (Math.atan2(np2y, np2x) - Math.atan2(npy, npx));
 		}
 		, toDegree: function(angle){
 			return angle * 180 / Math.PI;
 		}
 
-		, add: function(p1, p2, normalized){
-			var x = p1.x + p2.x;
-			var y = p1.y + p2.y;
+		, add: function(x1, y1, x2, y2, normalized){
+			// you can use this as add(p1, p2, n)
+			var [x1, y1, x2, y2, normalized] = this.to5args(x1, y1, x2, y2, normalized);
+
+			var x = x1 + x2;
+			var y = y1 + y2;
 			if(normalized){
 				var mag = Math.sqrt(x * x + y * y);
 				x = x / mag;
@@ -34,9 +62,12 @@ define(function(){
 			return {x: x, y: y};
 		}
 
-		, sub: function(p1, p2, normalized){
-			var x = p1.x - p2.x;
-			var y = p1.y - p2.y;
+		, sub: function(x1, y1, x2, y2, normalized){
+			// you can use this as sub(p1, p2, n)
+			var [x1, y1, x2, y2, normalized] = this.to5args(x1, y1, x2, y2, normalized);
+
+			var x = x1 - x2;
+			var y = y1 - y2;
 			if(normalized){
 				var mag = Math.sqrt(x * x + y * y);
 				x = x / mag;
@@ -44,26 +75,46 @@ define(function(){
 			}
 			return {x: x, y: y};
 		}
-		, mult: function(p, n){
-			return {x: p.x * n, y: p.y * n};
+		, mult: function(x, y, n){
+			// you can use this as mult(p, n)
+			var [x, y, n] = this.to3args(x, y, n);
+
+			return {x: x * n, y: y * n};
 		}
-		, mag: function(p){
-			return Math.sqrt(p.x * p.x + p.y * p.y);
+		, mag: function(x, y){
+			// you can use this as mag(p)
+			var [x, y] = this.to3args(x, y);
+
+			return Math.sqrt(x * x + y * y);
 		}
 
 		// = get the point moved by specified angle
-		, mv: function(p, ang){
-			var pMag = Math.sqrt(p.x * p.x + p.y * p.y); // magnitude of p
-			var oAng = Math.atan2(p.y, p.x); // original angle
-			return {x: (pMag * Math.cos(oAng + ang)), y: (pMag * Math.sin(oAng + ang))};
+		, mv: function(x, y, ang){
+			// you can use this as mv(p, ang)
+			var [x, y, ang] = this.to3args(x, y, ang);
+
+			var pMag = Math.sqrt(x * x + y * y); // magnitude of p
+			var oAng = Math.atan2(y, x); // original angle
+				return {x: (pMag * Math.cos(oAng + ang)), y: (pMag * Math.sin(oAng + ang))};
 		}
 
 		// = get the mid point between two points.
-		, mid: function(p1, p2){
+		, mid: function(x1, y1, x2, y2){
+			// you can use this as mid(p1, p2)
+			var [x1, y1, x2, y2] = this.to5args(x1, y1, x2, y2);
+
 			return {
-				x: p1.x + (p2.x - p1.x) / 2
-				, y: p1.y + (p2.y - p1.y) / 2
+				x: x1 + (x2 - x1) / 2
+				, y: y1 + (y2 - y1) / 2
 			};
+		}
+
+		// = whether object1 & object2 are within a certain distance.
+		, within: function(x1, y1, x2, y2, distance){
+			// you can use this as within(p1, p2, d)
+			var [x1, y1, x2, y2, distance] = this.to5args(x1, y1, x2, y2, distance);
+
+			return (this.dist(x1, y1, x2, y2) < distance);
 		}
 
 		// = get the projected point on the line
@@ -90,7 +141,33 @@ define(function(){
 		}
 	};
 
+	var extention = {
+		cutInArray: function(orgnArr, idx, arr){
+			for(var i = 0; i < arr.length; i++) orgnArr.splice(idx + i, 0, arr[i]);
+			return orgnArr;
+		}
+	};
+
+	var renderer = {
+		hex2rgb: function(hex){
+			// Expand shorthand form (e.g. "03F") to full form (e.g. "0033FF")
+			var shorthandRegex = /^#?([a-f\d])([a-f\d])([a-f\d])$/i;
+			hex = hex.replace(shorthandRegex, function(m, r, g, b){
+				return r + r + g + g + b + b;
+			});
+
+			var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+			return result ? {
+				r: parseInt(result[1], 16),
+				g: parseInt(result[2], 16),
+				b: parseInt(result[3], 16)
+			} : null;
+		}
+	};
+
 	return {
 		tri: trigonometry
+		, ren: renderer
+		, ex: extention
 	};
 });

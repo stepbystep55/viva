@@ -27,6 +27,26 @@ define(['jquery', 'hammer', 'pjs', 'utl', 'utlx', 'pjsx'], function($, Hammer, $
 	var omegas = [];
 	var clay = null;
 
+
+	var jointManager = {
+		init: function(){
+			this.target = null;
+			this.active = false;
+			return this;
+		}
+		, set: function(o){
+			this.target = o;
+			this.active = true;
+			return this;
+		}
+		, addTo: function(o){
+			this.target.moveTo(o);
+			o.moveTo(this.target);
+			this.init();
+			return this;
+		}
+	};
+
 	var app = function(){
 
 		$p.setup = function(){
@@ -44,8 +64,8 @@ define(['jquery', 'hammer', 'pjs', 'utl', 'utlx', 'pjsx'], function($, Hammer, $
 			omegas.push(omega);
 
 			clay = $px.fac.newClay(300, 100, {debug: true});
-			clay.addPoint(350, 50);
-			clay.addPoint(350, 150);
+			clay.addSunrays(350, 50);
+			clay.addSunrays(350, 150);
 		};
 
 		var drawBackground = function(){
@@ -66,21 +86,17 @@ define(['jquery', 'hammer', 'pjs', 'utl', 'utlx', 'pjsx'], function($, Hammer, $
 				omega.renderPoints();
 				omega.renderPointsPoints();
 			}
+
 			clay.update($p.mouseX, $p.mouseY);
 			clay.render();
 			clay.renderCenter();
 			clay.renderPoints();
+			clay.renderPointsPoints();
 		};
 
 		$p.mousePressed = function(){
-			for(var h = 0; h < omegas.length; h++){
-				var omega = omegas[h];
-				if(omega.grabAnchors($p.mouseX, $p.mouseY)) return;
-				for(var i = 0; i < omega.points.length; i++) if(omega.points[i].grab($p.mouseX, $p.mouseY)) return;
-				for(var i = 0; i < omega.points.length; i++) if(omega.points[i].grabPoints($p.mouseX, $p.mouseY)) return;
-			}
+			for(var h = 0; h < omegas.length; h++) if(omegas[h].grab($p.mouseX, $p.mouseY)) return;
 			if(clay.grab($p.mouseX, $p.mouseY)) return;
-			if(clay.grabPoints($p.mouseX, $p.mouseY)) return;
 		};
 
 		$p.mouseReleased = function(){
@@ -91,10 +107,11 @@ define(['jquery', 'hammer', 'pjs', 'utl', 'utlx', 'pjsx'], function($, Hammer, $
 		$p.setup();
 	};
 
-	var hammertime = new Hammer($('#canvas').get(0));
+	var hammertime = new Hammer($p.externals.canvas);
 	hammertime.on('doubletap', function(e){
-		clay.spawnPoint($p.mouseX, $p.mouseY);
-		for(var i = 0; i < omegas.length; i++) omegas[i].spawnPoint($p.mouseX, $p.mouseY);
+		e.preventDefault();
+		if(clay.spawnPoint($p.mouseX, $p.mouseY)) return;
+		for(var i = 0; i < omegas.length; i++) if(omegas[i].spawnPoint($p.mouseX, $p.mouseY)) return;
 	});
 
 	return app;

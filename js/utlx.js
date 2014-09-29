@@ -23,8 +23,8 @@ define(['underscore', 'utl'], function(_, utl){
       return this;
     }
 
-    , pushCallbacks: function(obj, mtd, args){
-      this.callbacks.push({obj: obj, mtd: mtd, args: args});
+    , pushCallbacks: function(obj, mtd){
+      this.callbacks.push({obj: obj, mtd: mtd});
       return this;
     }
 
@@ -41,7 +41,7 @@ define(['underscore', 'utl'], function(_, utl){
       if(!args.opts.nocallback){
         for(var i = 0; i < this.callbacks.length; i++){
           var callback = this.callbacks[i];
-          callback.mtd.apply(callback.obj, callback.args);
+          callback.mtd.apply(callback.obj, [this]);
         }
       }
       return this;
@@ -49,7 +49,17 @@ define(['underscore', 'utl'], function(_, utl){
 
     // move to the specified location
     , moveTo: function(x, y, opts){
+      // opts:
+      //   sacred.points - points that can't be on same coordinate
+      //   sacred.radius - radius not to be pentrate
       var args = this.translateArgs(x, y, opts);
+
+      // avoid to locate on same coordinate
+      if(args.opts.sacred){
+        for(var i = 0; i < args.opts.sacred.points.length; i++){
+          if(utl.tri.within({x: args.x, y: args.y}, args.opts.sacred.points[i], args.opts.sacred.radius || 5)) return this;
+        }
+      }
       return this.move((args.x - this.x), (args.y - this.y), args.opts);
     }
 
@@ -95,7 +105,8 @@ define(['underscore', 'utl'], function(_, utl){
   };
   // extends movable
   for(var key in movable){
-    if(key === 'init'){
+    if(key === 'name'){ // nothing
+    }else if(key === 'init'){
       grabbable.init = function(x, y, opts){ // you can call this as 'init(p, opts)'
         var args = movable.translateArgs(x, y, opts);
         if(!args.opts) args.opts = {};
@@ -120,8 +131,8 @@ define(['underscore', 'utl'], function(_, utl){
   // grab this. return true if success to grab
   grabbable.grab = function(x, y){
     var args = this.translateArgs(x, y);
-    if(utl.tri.dist(this, {x: args.x, y: args.y}) < this.rad4grab) this.grabbed = true;
-    return this.grabbed;
+    if(utl.tri.within(this.x, this.y, args.x, args.y, this.rad4grab)) this.grabbed = true;
+    return (this.grabbed ? this : null);
   };
   // release this. always return true
   grabbable.release = function(){
@@ -134,59 +145,71 @@ define(['underscore', 'utl'], function(_, utl){
     return false;
   };
   // overrridable
-  grabbable.update = function(){
-    return this;
+  grabbable.update = function(x, y, opts){
+    return this.moveTo(x, y, opts);
   };
 
   /*
    * an grabbable center with grabbable sparks.
    * the center's moving affects sparks but sparks' moving doesn't affect others.
    */
-  var sunrays = {
-    name: 'sunrays'
+  var sunrays = {};
+  for(var key in grabbable) sunrays[key] = grabbable[key]; // extends movable
+  sunrays.name = 'sunrays';
+
+  sunrays.init = function(x, y, opts){
+    this.HANDLE_LENGTH = 30;
+
+    var args = grabbable.translateArgs(x, y, opts);
+    grabbable.init.call(this, args.x, args.y, args.opts);
+    this.rad4spawn = args.opts.rad4spawn || 10; // radious of point that can spawning points
+    this.points = [];
+    return this;
   };
-  // extends movable
-  for(var key in grabbable){
-    if(key === 'init'){
-      sunrays.init = function(x, y, opts){
-        var args = grabbable.translateArgs(x, y, opts);
-        grabbable.init.call(this, args.x, args.y, args.opts);
-        this.rad4spawn = args.opts.rad4spawn || 10; // radious of point that can spawning points
-        this.points = [];
-        return this;
-      };
-    }else if(key === 'move'){
-      sunrays.move = function(x, y, opts){
-        // options:
-        //   alone - true if not move points
-        var args = grabbable.translateArgs(x, y, opts);
-        if(!this.canMove(args.opts.forced)) return this;
-        grabbable.move.call(this, args.x, args.y, args.opts);
-        if(!args.opts.alone){
-          for(var i = 0; i < this.points.length; i++) this.points[i].move(this.track(), {forced: true});
-        }
-        return this;
-      };
-    }else if(key === 'release'){
-      sunrays.release = function(){
-        grabbable.release.call(this);
-        this.releasePoints();
-        return true;
-      };
-    }else{
-      sunrays[key] = grabbable[key];
+  sunrays.move = function(x, y, opts){
+    // options:
+    //   alone - true if not move points
+    var args = grabbable.translateArgs(x, y, opts);
+    if(!this.canMove(args.opts.forced)) return this;
+    grabbable.move.call(this, args.x, args.y, args.opts);
+    if(!args.opts.alone){
+      for(var i = 0; i < this.points.length; i++) this.points[i].move(this.track(), {forced: true});
     }
-  }
+    return this;
+  };
+  sunrays.grab = function(x, y){
+    if(grabbable.grab.call(this, x, y)) return this;
+    var p;
+    if(p = this.grabPoints(x, y)) return p;
+    return null;
+  };
+  sunrays.release = function(){
+    grabbable.release.call(this);
+    this.releasePoints();
+    return true;
+  };
   sunrays.addPoint = function(x, y, opts){ // opts not required
     var args = this.translateArgs(x, y, opts);
     this.addPoints(Object.create(grabbable).init(args.x, args.y), args.opts);
+    return this;
+  };
+  sunrays.addSunrays = function(x, y, opts){ // opts not required
+    var point = Object.create(sunrays).init(x, y, opts);
+    var center2point = utl.tri.sub(point, this, true);
+    var point2handle1 = utl.tri.mult(utl.tri.mv(center2point, -(Math.PI / 2)), this.HANDLE_LENGTH);
+    var handle1 = utl.tri.add(point, point2handle1);
+    var point2handle2 = utl.tri.mult(utl.tri.mv(center2point, (Math.PI / 2)), this.HANDLE_LENGTH);
+    var handle2 = utl.tri.add(point, point2handle2);
+    point.addPoint(handle1.x, handle1.y);
+    point.addPoint(handle2.x, handle2.y);
+    this.addPoints(point, opts);
     return this;
   };
   sunrays.addPoints = function(pArr, opts){ // opts not required
     if(!_.isArray(pArr)) pArr = [pArr]; // pArr can be one value
     var idx2add = this.points.length;
     if(!_.isNull(opts) && !_.isUndefined(opts) && _.has(opts, 'idx')) idx2add = opts.idx;
-    for(var i = 0; i < pArr.length; i++) this.points.splice(idx2add + i, 0, pArr[i]);
+    utl.ex.cutInArray(this.points, idx2add, pArr);
     return this;
   };
   sunrays.spawnPoint = function(x, y){
@@ -200,31 +223,32 @@ define(['underscore', 'utl'], function(_, utl){
         break;
       }
     }
-    if(!canSpawn) return this;
+    if(!canSpawn) return false;
 
     // spawn
     var loc = null;
     if(idx == 0){
-      var centerToSpawnable = utl.tri.sub(this.points[idx], this);
-      var centerToSpawned = utl.tri.mv(centerToSpawnable, Math.PI / 6);
-      loc = utl.tri.add(this, centerToSpawned);
+      var center2spawnable = utl.tri.sub(this.points[idx], this);
+      var center2spawned = utl.tri.mv(center2spawnable, Math.PI / 6);
+      loc = utl.tri.add(this, center2spawned);
     }else{
       loc = utl.tri.mid(this.points[idx - 1], this.points[idx]);
     }
-    this.addPoint(loc.x, loc.y, {idx: idx});
+    this.addSunrays(loc.x, loc.y, {idx: idx});
 
-    return this;
+    return true;
   };
-  sunrays.update = function(x, y){
-    var args = this.translateArgs(x, y);
-    this.moveTo(args.x, args.y);
-    for(var i = 0; i < this.points.length; i++) this.points[i].moveTo(args.x, args.y);
+  sunrays.update = function(x, y, opts){
+    var args = this.translateArgs(x, y, opts);
+    this.moveTo(args.x, args.y, opts);
+    for(var i = 0; i < this.points.length; i++) this.points[i].update(args.x, args.y);
     return this;
   };
   sunrays.grabPoints = function(x, y){
     var args = this.translateArgs(x, y);
-    for(var i = 0; i < this.points.length; i++) if(this.points[i].grab(args.x, args.y)) return true;
-    return false;
+    var p;
+    for(var i = 0; i < this.points.length; i++) if(p = this.points[i].grab(args.x, args.y)) return p;
+    return null;
   };
   sunrays.releasePoints = function(){
     for(var i = 0; i < this.points.length; i++) this.points[i].release();
@@ -234,6 +258,8 @@ define(['underscore', 'utl'], function(_, utl){
   // two anchors and points that are affected by the anchors' moving.
   var histogram = {
     init: function(a1, a2, opts){
+      this.HANDLE_LENGTH = 30;
+
       // a1 & a2 & points must be grabbable.
       this.a1 = a1;
       this.a2= a2;
@@ -264,13 +290,13 @@ define(['underscore', 'utl'], function(_, utl){
 
       for(var i = 0; i < pArr.length; i++){
         pArr[i].projected = Object.create(movable).init(utl.tri.prj(this.a1, this.a2, pArr[i]));
-        pArr[i].pushCallbacks(this, this.respondForPoint, [pArr[i]]);
+        pArr[i].pushCallbacks(this, this.respondForPoint);
         if(pArr[i].points){
           for(var k = 0; k < pArr[i].points.length; k++){
             pArr[i].points[k].projected = Object.create(movable).init(utl.tri.prj(this.a1, this.a2, pArr[i].points[k]));
           }
         }
-        this.points.splice(idx2add + i, 0, pArr[i]);
+        utl.ex.cutInArray(this.points, idx2add, pArr);
       }
 
       return this;
@@ -285,17 +311,17 @@ define(['underscore', 'utl'], function(_, utl){
           break;
         }
       }
-      if(!canSpawn) return this;
+      if(!canSpawn) return false;
 
       // spawn
       if(idx == 0){
-        // currently nothing
+        // currently nothing to do
       }else{
         var loc = utl.tri.mid(this.points[idx - 1], this.points[idx]);
         this.addPoint(loc.x, loc.y, {idx: idx});
       }
 
-      return this;
+      return true;
     }
     , respondForAnchor1: function(){
       this.respondForAnchor(this.a2, this.a1);
@@ -310,15 +336,15 @@ define(['underscore', 'utl'], function(_, utl){
       var angleChanged = utl.tri.ang(previousAnchorStayedToAnchorMoved, currentAnchorStayedToAnchorMoved);
 
       for(var i = 0; i < this.points.length; i++){
-        this.movePoint(this.points[i], anchorStayed, propotionChanged, angleChanged);
+        this.movePointByAnchor(this.points[i], anchorStayed, propotionChanged, angleChanged);
         if(this.points[i].points){
           for(var k = 0; k < this.points[i].points.length; k++){
-            this.movePoint(this.points[i].points[k], anchorStayed, propotionChanged, angleChanged);
+            this.movePointByAnchor(this.points[i].points[k], anchorStayed, propotionChanged, angleChanged);
           }
         }
       }
     }
-    , movePoint: function(point, anchorStayed, propotionChanged, angleChanged){
+    , movePointByAnchor: function(point, anchorStayed, propotionChanged, angleChanged){
       var anchorStayedToPoint = point.diff(anchorStayed);
       anchorStayedToPoint = utl.tri.mv(anchorStayedToPoint, angleChanged);
       anchorStayedToPoint = utl.tri.mult(anchorStayedToPoint, propotionChanged);
@@ -345,18 +371,21 @@ define(['underscore', 'utl'], function(_, utl){
     }
 
     , grab: function(x, y){
-      if(this.grabAnchors(x, y)) return true;
-      if(grabPoints(x, y)) return true;
-      return false;
+      var p;
+      if(p = this.grabAnchors(x, y)) return p;
+      if(p = this.grabPoints(x, y)) return p;
+      return null;
     }
     , grabAnchors: function(x, y){
-      if(this.a1.grab(x, y)) return true;
-      if(this.a2.grab(x, y)) return true;
-      return false;
+      var a;
+      if(a = this.a1.grab(x, y)) return a;
+      if(a = this.a2.grab(x, y)) return a;
+      return null;
     }
     , grabPoints: function(x, y){
-      for(var i = 0; i < this.points.length; i++) if(this.points[i].grab(x, y)) return true;
-      return false;
+      var p;
+      for(var i = 0; i < this.points.length; i++) if(p = this.points[i].grab(x, y)) return p;
+      return null;
     }
     , release: function(){
       this.a1.release();
@@ -367,10 +396,20 @@ define(['underscore', 'utl'], function(_, utl){
     , update: function(x, y){
       this.a1.moveTo(x, y);
       this.a2.moveTo(x, y);
-      for(var i = 0; i < this.points.length; i++) this.points[i].update(x, y);
+      var opts = {
+        sacred: {
+          points: [this.a1, this.a2]
+          , radius: 5
+        }
+      };
+      for(var i = 0; i < this.points.length; i++) this.points[i].update(x, y, opts);
       return this;
     }
   };
+
+  var joined = {
+
+  }
 
   var factory = {
     newMovable: function(x, y){
